@@ -33,6 +33,12 @@ kein Git LFS, Actions schlank halten (das Repo ist privat, das Kontingent ist be
 - Spieltexte auf Deutsch, alltagsnah, mit Augenzwinkern.
 - Keine Gedankenstriche (Em-Dash) in Texten.
 
+## Optik der Oberfläche
+- Alles im Stil des Kenney UI Pack Adventure (`src/ui/`): Holzrahmen (`.holz`), Papier (`.papier`), Knöpfe
+  (`.knopf`, `.knopf-rot`, `.knopf-grau`), Banner (`.banner`), Plaketten (`.plakette`). Keine Standard-Browser-Optik,
+  keine Emojis als Symbole, keine generischen Farbverläufe. Symbole werden aus den 3D-Modellen gerendert.
+- Schriften: Lilita One für Titel, Zahlen und Knöpfe, Nunito für Fließtext.
+
 ## Bedienung
 - Zuerst fürs Handy (Hochformat, Touch), Desktop muss aber auch gehen.
 - Einstellungen und Menüs höchstens zwei Ebenen tief, klare Namen, folgenreiche Aktionen nur mit Bestätigung.

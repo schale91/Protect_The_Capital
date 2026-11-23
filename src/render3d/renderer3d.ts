@@ -329,7 +329,7 @@ export class Renderer3D {
   }
 
   /** Bilder für Knöpfe und Bestiarium, gerendert mit einer kleinen eigenen Kamera. */
-  bildVon(art: BauwerkId | 'verstaerken' | 'abreissen' | GegnerId): string {
+  bildVon(art: BauwerkId | 'verstaerken' | 'abreissen' | GegnerId | Teil): string {
     const s = new THREE.Scene();
     s.add(new THREE.HemisphereLight('#ffffff', '#55504a', 2.2));
     const d = new THREE.DirectionalLight('#fff2e0', 2);
@@ -338,7 +338,13 @@ export class Renderer3D {
     let obj: THREE.Object3D;
     let ziel = new THREE.Vector3(0, 0.45, 0);
     let abstand = 2.1;
-    if (art === 'verstaerken') {
+    if (art.includes('/')) {
+      obj = this.teil(art as Teil);
+      const box = new THREE.Box3().setFromObject(obj);
+      const groesse = box.getSize(new THREE.Vector3());
+      ziel = box.getCenter(new THREE.Vector3());
+      abstand = Math.max(groesse.x, groesse.y, groesse.z) * 2.2;
+    } else if (art === 'verstaerken') {
       obj = this.bauModell('aussenmauer', 1, 3);
       ziel = new THREE.Vector3(0, 0.5, 0);
       abstand = 2.4;
@@ -350,7 +356,7 @@ export class Renderer3D {
     } else if (art in GEGNER) {
       obj = this.zombieModell(art as GegnerId).obj;
       ziel = new THREE.Vector3(0, 0.32, 0);
-      abstand = 1.5;
+      abstand = art === 'pupsbeule' ? 2.1 : 1.5;
     } else {
       obj = this.bauModell(art as BauwerkId, 1, 0);
       if (art === 'armbrust' || art === 'molotow') {

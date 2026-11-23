@@ -11,10 +11,13 @@ Nur Inhalte mit CC0 (frei, ohne Bedingungen) oder CC-BY (Namensnennung) verwende
 | Survival Kit | Kenney | CC0 | `public/modelle/ueberleben/` | Holzwand (verstärkter Zaun), Notlager: Zelte, Lagerfeuer, Fässer, Kisten, Werkbank, Wegweiser |
 | Car Kit | Kenney | CC0 | `public/modelle/autos/` | Autowracks, Reifen, Tür, Leitkegel auf der Landstraße |
 | Impact Sounds, RPG Audio, UI Audio | Kenney | CC0 | `public/toene/` | Treffer, Glocke um 18 Uhr, Matsch, Münzen, Klicks |
+| UI Pack Adventure | Kenney | CC0 | `src/ui/` | Holzrahmen, Papier, Knöpfe, Banner, Balken, Häkchen, Schließen |
+| Ranks Pack | Kenney | CC0 | `src/ui/abzeichen/` | Abzeichen für die Ehrungen nach jeder Nacht |
+| Schriften Lilita One und Nunito | Google Fonts über Fontsource | SIL Open Font License | npm-Pakete | Überschriften, Knöpfe, Fließtext |
 
 Weitere hochgeladene Kenney-Pakete (alle CC0), noch nicht eingebaut: Animated Characters Survivors, Nature Kit,
 Mini Forest, Food Kit, Building Kit, City Kit Roads, Pirate Kit, Mini Dungeon, Mini Shop, Platformer Kit, Cube Pets,
-Ranks Pack, UI Pack Adventure, UI Pack Pixel Adventure. Bei Bedarf hier eintragen.
+UI Pack Pixel Adventure. Bei Bedarf hier eintragen.
 
 Eigene Low-Poly-Modelle (Speerfalle, Hecken, Seitentore, Laternen, Trümmer) stehen in `src/render3d/modelle.ts`.
 
