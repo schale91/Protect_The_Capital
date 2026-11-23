@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+    <meta name="theme-color" content="#121016" />
+    <title>Protect the Capital</title>
+  </head>
+  <body>
+    <div id="app">
+      <header id="hud">
+        <div class="wert" id="hud-nacht">Tag 1</div>
+        <div class="wert" id="hud-schrott" title="Schrott">⚙ 0</div>
+        <div class="kern">
+          <div class="kern-titel">Hauptstadt</div>
+          <div class="kern-balken"><div id="hud-kern"></div></div>
+        </div>
+        <button id="menue-knopf" class="klein" aria-label="Menü">☰</button>
+      </header>
+
+      <main id="buehne">
+        <canvas id="karte"></canvas>
+        <div id="toast" hidden></div>
+        <div id="nacht-anzeige" hidden></div>
+      </main>
+
+      <footer id="leiste">
+        <div id="info">Wähle unten ein Bauwerk und tippe auf ein Feld.</div>
+        <div id="werkzeuge"></div>
+        <div id="nacht-steuerung" hidden>
+          <button id="tempo" class="klein">Tempo 1×</button>
+          <button id="ueberspringen" class="klein">Bis zum Morgen</button>
+        </div>
+        <button id="nacht-knopf" class="gross">Nacht 1 starten</button>
+      </footer>
+    </div>
+
+    <dialog id="bilanz">
+      <h2 id="bilanz-titel"></h2>
+      <div id="bilanz-inhalt"></div>
+      <button id="bilanz-weiter" class="gross">Weiter</button>
+    </dialog>
+
+    <dialog id="menue">
+      <h2>Menü</h2>
+      <p class="leise">Protect the Capital, Meilenstein 1. Ein Bezirk, ein Tor, viele Tote.</p>
+      <h3>Bestiarium</h3>
+      <div id="bestiarium"></div>
+      <button id="neu-anfangen" class="gefahr">Spiel neu anfangen</button>
+      <button id="menue-zu" class="gross">Schließen</button>
+    </dialog>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

@@ -5,7 +5,7 @@ gehört allen. Jeden Abend um 18 Uhr kommen die Toten. Fällt die Hauptstadt, fa
 mit Erinnerungen, die sie in die Chronik eintragen.
 
 - Konzept: [docs/SPIELKONZEPT.md](docs/SPIELKONZEPT.md)
-- Stand: Meilenstein 1 (ein Bezirk, Angriff per Knopf)
+- Stand: Meilenstein 1 (ein Bezirk, Angriff per Knopf, Spielstand im Browser)
 
 ## Entwickeln
 
@@ -15,3 +15,12 @@ npm run dev      # Entwicklungsserver
 npm test         # Tests
 npm run build    # fertige Dateien in dist/
 ```
+
+## Veröffentlichen (Cloudflare, kostenlos)
+
+Cloudflare baut das Spiel nach jedem Push auf `main` selbst. Einmalig einrichten:
+
+1. Bei Cloudflare ein kostenloses Konto anlegen (keine Zahlungsmethode nötig).
+2. **Workers & Pages → Erstellen → Pages → Mit Git verbinden**, GitHub verbinden und dieses Repo auswählen.
+3. Build-Befehl: `npm run build`, Ausgabeordner: `dist`, Umgebungsvariable `NODE_VERSION` = `22`.
+4. Speichern. Danach gibt es eine Adresse wie `protect-the-capital.pages.dev`.
