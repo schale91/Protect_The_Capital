@@ -5,7 +5,8 @@ gehört allen. Jeden Abend um 18 Uhr kommen die Toten. Fällt die Hauptstadt, fa
 mit Erinnerungen, die sie in die Chronik eintragen.
 
 - Konzept: [docs/SPIELKONZEPT.md](docs/SPIELKONZEPT.md)
-- Stand: Meilenstein 1 (ein Bezirk, Angriff per Knopf, Spielstand im Browser)
+- Stand: Meilenstein 1 in 3D (ein Bezirk, Angriff per Knopf, Spielstand im Browser)
+- Grafik: Modelle von [Kenney](https://kenney.nl) (CC0), siehe [docs/QUELLEN.md](docs/QUELLEN.md)
 
 ## Entwickeln
 

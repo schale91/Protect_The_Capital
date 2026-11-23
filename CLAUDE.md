@@ -13,7 +13,9 @@ Alles bleibt außerhalb von Claude kostenlos: GitHub Free, Cloudflare Free. Kein
 kein Git LFS, Actions schlank halten (das Repo ist privat, das Kontingent ist begrenzt).
 
 ## Technik
-- Vite, TypeScript, Canvas 2D. Keine Spiel-Engine.
+- Vite, TypeScript, Three.js (3D, Low-Poly). Keine schwere Spiel-Engine.
+- Modelle von Kenney (CC0) unter `public/modelle/`, Herkunft in `docs/QUELLEN.md` eintragen. Nur CC0 oder CC-BY.
+- Feste Landschaft wird zu wenigen Meshes verschmolzen; aufs Handy achten (Dreiecke, Zeichenaufrufe, Lichter).
 - `src/sim/` ist die Spielsimulation. Sie muss **deterministisch** sein, weil derselbe Code später auf dem Server
   um 18 Uhr rechnet und auf dem Handy als Wiederholung abspielt:
   - kein `Math.random`, nur `src/sim/rng.ts`;

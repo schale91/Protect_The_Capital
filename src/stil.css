@@ -89,9 +89,10 @@ body {
 }
 
 #karte {
-  image-rendering: pixelated;
-  touch-action: manipulation;
+  touch-action: none;
   display: block;
+  position: absolute;
+  inset: 0;
 }
 
 #toast {
@@ -167,7 +168,6 @@ body {
 .werkzeug img {
   width: 32px;
   height: 32px;
-  image-rendering: pixelated;
 }
 
 .werkzeug .preis {
@@ -292,9 +292,8 @@ dialog h3 {
 }
 
 .bestie img {
-  width: 36px;
-  height: 36px;
-  image-rendering: pixelated;
+  width: 48px;
+  height: 48px;
 }
 
 #bilanz-weiter,

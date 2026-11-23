@@ -15,7 +15,7 @@ Stand: 23.11.2026, Entwurf 1. Alles hier ist verhandelbar.
 - **Incremental:** Ressourcen laufen auch offline weiter. Zahlen werden groß, Automatisierung nimmt Arbeit ab.
 - **Tower Defense:** Die Toten suchen sich den Weg des geringsten Widerstands. Den gestaltet man selbst.
 - **Stadtaufbau:** Der eigene Bezirk ist Zuhause, Werkstatt und Festung zugleich.
-- **Optik:** 2D von oben, Pixelgrafik, gedeckte Farben mit Akzenten (Laternen, Feuer, Blut als Konfetti-Ersatz),
+- **Optik:** 3D in Low-Poly-Optik (Kenney-Stil), schräg von oben, düstere Nächte mit Laternen und Feuer,
   viele kleine Witze im Detail.
 
 ---
@@ -251,14 +251,14 @@ Ziel für zehn Jahre: über **150 Gegnertypen**, freigeschaltet über Zeitalter,
 
 | Teil | Werkzeug | Warum |
 |---|---|---|
-| Spiel im Browser | Vite, TypeScript, Canvas 2D | schlank, volle Kontrolle über Pixelgrafik und Touch, keine schwere Engine nötig |
+| Spiel im Browser | Vite, TypeScript, Three.js | 3D in Low-Poly-Optik, läuft im Browser auch auf dem Handy |
 | Hosting | Cloudflare Pages | gratis, automatisch nach jedem Push |
 | Server-Logik | Cloudflare Workers | gratis-Kontingent, kein Server zu warten |
 | Spielstand je Welt | Durable Objects mit SQLite | ein Objekt pro Welt hält alles zusammen; laut Cloudflare im Gratis-Plan nutzbar |
 | Angriff um 18 Uhr | Alarm im Durable Object | startet die Simulation pünktlich |
 | Kampfsimulation | eigene, deterministische TypeScript-Engine | läuft gleich auf Server und Handy, darum fälschungssicher und als Wiederholung abspielbar |
 | Anmeldung | Einladungslink plus Gerätecode | für Familie und Freunde reicht das, keine Passwörter |
-| Grafik | freie Pixel-Pakete (CC0) plus eigene Ergänzungen | ehrlich: Ich bin kein Pixelkünstler, gute freie Pakete sind der schnellste Weg zu einem hübschen Ergebnis |
+| Grafik | Kenney-Modelle (CC0) plus eigene Low-Poly-Ergänzungen | einheitlicher Stil, kostenlos, ohne Lizenzpflichten |
 
 Gratis-Grenzen laut Cloudflare (Stand der Doku, wird vor dem Start nochmal geprüft): unter anderem 5 GB Speicher je Konto,
 5 Millionen gelesene und 100.000 geschriebene Zeilen pro Tag. Für eine Freundesgruppe ist das weit mehr als genug.

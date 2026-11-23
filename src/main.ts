@@ -1,6 +1,5 @@
 import './stil.css';
-import { Renderer, type Vorschau } from './render/renderer';
-import { gegnerBild, leinwand, pixel, zeichneBauwerk, zeichneMauer } from './render/sprites';
+import { Renderer3D, type Vorschau } from './render3d/renderer3d';
 import { BAUBAR, BAUTEN, type BauId, GEGNER, GEGNER_REIHENFOLGE, MAUER, NACHT } from './sim/data';
 import { BREITE, GRUNDKARTE, ZEILE_AUSSENMAUER, idx } from './sim/karte';
 import { type Nachtbilanz, Nachtsim } from './sim/nacht';
@@ -24,7 +23,7 @@ const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as 
 
 const canvas = $<HTMLCanvasElement>('karte');
 const buehne = $('buehne');
-const renderer = new Renderer(canvas);
+const renderer = new Renderer3D(canvas);
 
 let stand: Spielstand = lade() ?? neuerSpielstand(neuerSeed());
 let werkzeug: Werkzeug | null = null;
@@ -80,12 +79,6 @@ function info(html: string): void {
 
 // ---------- Werkzeuge ----------
 
-function bildUrl(zeichnen: (ctx: CanvasRenderingContext2D) => void): string {
-  const [c, ctx] = leinwand(16, 16);
-  zeichnen(ctx);
-  return c.toDataURL();
-}
-
 function werkzeugLeiste(): void {
   const leiste = $('werkzeuge');
   leiste.innerHTML = '';
@@ -93,24 +86,19 @@ function werkzeugLeiste(): void {
     w: id,
     name: BAUTEN[id].name.replace('Molotow-Werfer', 'Molotow').replace('Armbrustturm', 'Armbrust'),
     preis: `${BAUTEN[id].kosten}`,
-    bild: bildUrl((ctx) => zeichneBauwerk(ctx, id, 1)),
+    bild: renderer.bildVon(id),
   }));
   eintraege.push({
     w: 'verstaerken',
     name: 'Mauer',
     preis: 'ab 15',
-    bild: bildUrl((ctx) => zeichneMauer(ctx, 2, 1)),
+    bild: renderer.bildVon('verstaerken'),
   });
   eintraege.push({
     w: 'abreissen',
     name: 'Abreißen',
     preis: '+50 %',
-    bild: bildUrl((ctx) => {
-      pixel(ctx, 3, 9, 10, 2, '#5e3b22');
-      pixel(ctx, 8, 3, 2, 8, '#8a5a33');
-      pixel(ctx, 5, 2, 8, 3, '#8d8d93');
-      pixel(ctx, 2, 12, 12, 2, '#d6453a');
-    }),
+    bild: renderer.bildVon('abreissen'),
   });
   for (const e of eintraege) {
     const b = document.createElement('button');
@@ -135,11 +123,8 @@ function waehle(w: Werkzeug): void {
 
 // ---------- Tippen auf die Karte ----------
 
-canvas.addEventListener('pointerup', (ev) => {
+renderer.beimTippen((x, y) => {
   if (sim) return;
-  const k = renderer.kachelBei(ev.clientX, ev.clientY);
-  if (!k) return;
-  const [x, y] = k;
   const i = idx(x, y);
   if (!werkzeug) {
     beschreibeFeld(x, y);
@@ -326,7 +311,7 @@ $('menue-knopf').addEventListener('click', () => {
   liste.innerHTML = '';
   for (const t of GEGNER_REIHENFOLGE) {
     const g = GEGNER[t];
-    const bild = gegnerBild(t, 0).toDataURL();
+    const bild = renderer.bildVon(t);
     const d = document.createElement('div');
     d.className = 'bestie';
     d.innerHTML = `<img alt="" src="${bild}"><div><b>${g.name}</b> (ab Nacht ${g.abNacht})<br><span class="leise">${g.text}</span></div>`;
@@ -351,13 +336,14 @@ $('neu-anfangen').addEventListener('click', () => {
 
 function anpassen(): void {
   const r = buehne.getBoundingClientRect();
-  renderer.groesse(r.width - 8, r.height - 8);
+  renderer.groesse(Math.floor(r.width), Math.floor(r.height));
 }
 new ResizeObserver(anpassen).observe(buehne);
 
 let letzte = performance.now();
 function schleife(jetzt: number): void {
-  const dt = Math.min(0.1, (jetzt - letzte) / 1000);
+  // Auf langsamen Geräten mehrere Schritte pro Bild rechnen, damit die Nacht nicht zäh wird
+  const dt = Math.min(0.25, (jetzt - letzte) / 1000);
   letzte = jetzt;
   if (sim) {
     if (!sim.ende) {
@@ -384,8 +370,8 @@ function schleife(jetzt: number): void {
   requestAnimationFrame(schleife);
 }
 
-werkzeugLeiste();
 hud();
+void renderer.bereit.then(() => werkzeugLeiste());
 if (stand.gefallen && stand.letzteBilanz) zeigeBilanz(stand.letzteBilanz);
 else if (stand.nacht === 1 && Object.keys(stand.bauten).length === 0) {
   info('<b>Willkommen in deinem Bezirk.</b> Um 18 Uhr kommen die Toten von oben. Bau Türme zwischen Mauer und Tor, dann starte die Nacht.');
