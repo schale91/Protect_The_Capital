@@ -336,7 +336,7 @@ Gratis-Grenzen laut Cloudflare (Stand der Doku, wird vor dem Start nochmal gepr�
 | Meilenstein | Inhalt |
 |---|---|
 | **M1: Spielbarer Kern** | Karte mit einem Bezirk, Mauer, Haupttor, Kern, 3 Türme, 3 Gegnertypen, Angriff per Knopf, deterministische Simulation mit Tests |
-| **M1b: Lebendiger Bezirk** | Bezirksgenerator mit vier Typen, Stadttor, Straßennetz, feste Hindernisse, größere Karte; Gebäude mit Aufgaben, Holz, Schrott, Nahrung, Bewohner; Bezirkswache |
+| **M1b: Lebendiger Bezirk** (erledigt) | Bezirksgenerator mit vier Typen, Stadttor, Straßennetz, feste Hindernisse, größere Karte; Gebäude mit Aufgaben, Holz, Schrott, Nahrung, Bewohner; Bezirkswache |
 | **M2: Mehrspieler** | Ring mit sieben Bezirken, Seitentore, Queren zum Nachbarn, Ringkarte zum Besuchen, Einladungslinks, Angriff um 18 Uhr, Wiederholung, Bezirk fällt und wird neu gelost |
 | **M3: Incremental** | Ressourcen, Offline-Produktion, Bezirksforschung mit den ersten 3 Ästen |
 | **M4: Roguelike** | Fall der Hauptstadt, Erinnerungen, Chronik, Epochen-Modifikatoren |

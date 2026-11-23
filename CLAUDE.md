@@ -23,6 +23,8 @@ kein Git LFS, Actions schlank halten (das Repo ist privat, das Kontingent ist be
   - kein `Math.sin`, `Math.cos`, `Math.hypot` oder andere Funktionen, deren Ergebnis zwischen Engines abweichen darf;
     `Math.sqrt` und Grundrechenarten sind in Ordnung;
   - Listen immer in fester Reihenfolge durchlaufen.
+- Der Bezirksgenerator (`src/sim/karte.ts`) ist deterministisch. Wer ihn ändert, ändert die Karten bestehender Spielstände;
+  dann die Version des Spielstands erhöhen.
 - Inhalte (Gebäude, Gegner, Wellen, später Forschung) sind **Daten** in `src/sim/data.ts`, keine Sonderlogik pro Typ,
   wo es sich vermeiden lässt. So kann das Spiel jahrelang wachsen.
 - Tests mit Vitest (`npm test`). Neue Spielregeln bekommen einen Test.

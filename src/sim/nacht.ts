@@ -13,7 +13,7 @@ import {
   NACHT,
   WELLE,
 } from './data';
-import { BREITE, type Boden, GRUNDKARTE, HOEHE, idx, istKern } from './karte';
+import { BREITE, type Boden, GELAENDE, HOEHE, idx, istKern } from './karte';
 import { Rng } from './rng';
 import { type BauwerkZustand, berechneFeld, naechsterSchritt } from './wege';
 
@@ -21,8 +21,10 @@ export interface NachtEingabe {
   nacht: number;
   seed: number;
   kernHp: number;
-  /** Bauwerk je Kachel (Index), inklusive Außenmauer und Haupttor. */
-  bauten: ReadonlyArray<{ i: number; id: BauwerkId; maxHp: number }>;
+  /** Gelände des Bezirks. */
+  boden: readonly Boden[];
+  /** Bauwerk je Kachel (Index), inklusive Außenmauer, Stadttor und Haupttor. */
+  bauten: ReadonlyArray<{ i: number; id: BauwerkId; maxHp: number; aktiv: boolean; reichweitePlus: number }>;
 }
 
 export interface Gegner {
@@ -102,7 +104,7 @@ export function planeWelle(nacht: number, rng: Rng): Ankunft[] {
 const leereZaehlung = (): Record<GegnerId, number> => ({ schlurfi: 0, sprinter: 0, pupsbeule: 0 });
 
 export class Nachtsim {
-  readonly boden: Boden[] = [...GRUNDKARTE];
+  readonly boden: Boden[];
   readonly bauten: (BauwerkZustand | null)[] = new Array(BREITE * HOEHE).fill(null);
   gegner: Gegner[] = [];
   zeit = 0;
@@ -121,8 +123,9 @@ export class Nachtsim {
 
   constructor(readonly eingabe: NachtEingabe) {
     this.kernHp = eingabe.kernHp;
+    this.boden = [...eingabe.boden];
     for (const b of eingabe.bauten) {
-      this.bauten[b.i] = { id: b.id, hp: b.maxHp, maxHp: b.maxHp, abklingen: 0 };
+      this.bauten[b.i] = { id: b.id, hp: b.maxHp, maxHp: b.maxHp, abklingen: 0, aktiv: b.aktiv, reichweitePlus: b.reichweitePlus };
     }
     this.dist = berechneFeld(this.boden, this.bauten);
     const rng = new Rng(eingabe.seed);
@@ -222,7 +225,8 @@ export class Nachtsim {
         g.brand.rest -= dt;
         if (g.brand.rest <= 1e-9) g.brand = null;
       }
-      let tempo = def.tempo;
+      // Auf der Straße kommen sie gut voran, im Rasen und auf Feldern langsamer
+      let tempo = def.tempo * (GELAENDE[this.boden[idx(g.tx, g.ty)]]?.tempo ?? 1);
       if (g.bremse) {
         tempo *= g.bremse.faktor;
         g.bremse.rest -= dt;
@@ -278,6 +282,8 @@ export class Nachtsim {
       if (!b) continue;
       const def = BAUTEN[b.id];
       if (!def.fern && !def.falle) continue;
+      // Ohne Besatzung schießt kein Turm
+      if (def.fern && !b.aktiv) continue;
       b.abklingen -= dt;
       if (b.abklingen > 1e-9) continue;
       const bx = (i % BREITE) + 0.5;
@@ -285,7 +291,8 @@ export class Nachtsim {
 
       if (def.fern) {
         const f = def.fern;
-        const r2 = f.reichweite * f.reichweite;
+        const reichweite = f.reichweite + b.reichweitePlus;
+        const r2 = reichweite * reichweite;
         let ziel: Gegner | null = null;
         let zielWert = Infinity;
         for (const g of this.gegner) {
@@ -383,6 +390,8 @@ export function auszeichnungen(b: Nachtbilanz): string[] {
   if (b.ausgang === 'gefallen') liste.push('Licht aus: Die Hauptstadt ist gefallen.');
   else if (b.kernSchaden === 0) liste.push('Weiße Weste: Kein Toter hat die Hauptstadt gesehen.');
   if (b.zerstoert.haupttor) liste.push('Tür auf, Tote rein: Das Haupttor ist zerlegt worden.');
+  if (b.zerstoert.bezirkswache) liste.push('Licht aus im Bezirk: Die Bezirkswache ist gefallen.');
+  if (b.zerstoert.stadttor) liste.push('Hereinspaziert: Das Stadttor hat nachgegeben.');
   if (b.geplatzt > 0) {
     liste.push(`Nasenklammer-Orden: ${b.geplatzt} ${b.geplatzt === 1 ? 'Pupsbeule ist' : 'Pupsbeulen sind'} geplatzt.`);
   }

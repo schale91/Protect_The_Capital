@@ -91,6 +91,7 @@ export interface TurmTeile {
   kopf?: THREE.Object3D;
   stacheln?: THREE.Object3D;
   flammen?: THREE.Mesh[];
+  rad?: THREE.Object3D;
 }
 
 /** Selbst gebaute Bauwerke, für die es (noch) kein Kenney-Modell gibt. */
