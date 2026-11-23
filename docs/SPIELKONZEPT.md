@@ -56,6 +56,60 @@ Stand: 23.11.2026, Entwurf 1. Alles hier ist verhandelbar.
 
 ---
 
+## 2a. Der Bezirk im Detail (Stand 23.11.2026, nach Rückmeldung von Alex)
+
+Wir sind **sieben Leute**. Der Ring hat also sieben Bezirke um die Hauptstadt.
+
+### Bezirkstypen
+Jeder Bezirk wird **zugelost**, und zwar jedes Mal neu, wenn er fällt. Jeder Typ hat eine eigene Grundkarte mit festen
+Hindernissen, einem typischen Straßennetz, einem eigenen Gebäude und einem Bonus. Innerhalb eines Typs mischt der Zufall
+die Karte, sodass kein Bezirk aussieht wie ein anderer.
+
+| Typ | Gelände und Route | Eigenes Gebäude | Bonus |
+|---|---|---|---|
+| **Altstadt** | enge, verwinkelte Gassen zwischen Fachwerk-Ruinen, Marktplatz, Kirche; wenig Bauplatz, viele Engstellen | **Glockenturm**: Vorwarnung vor der Nacht, Moral | Forschung |
+| **Vorstadt** | breite Straßen mit Kurven, Einfamilienhäuser mit Gärten, Zäune und Hecken; viel Platz | **Baumarkt**: Bauen günstiger | Bewohner |
+| **Industriegebiet** | Hallen, Containerstapel, ein Gleisdamm mit nur einem Bahnübergang | **Schrottpresse**: mehr Schrott aus Wracks | Schrott, Strom |
+| **Dorf am Bach** | Felder, Scheune, Hühnerstall; ein Bach quer durch mit zwei Brücken als natürliche Engstellen | **Wassermühle**: Mehl und Strom | Nahrung, Wasser |
+
+### Die Route der Toten
+- In der Außenmauer gibt es ein **Stadttor**, nie direkt über dem Haupttor. Die Toten kommen vom **Friedhof** hinter
+  der Landstraße.
+- Vom Stadttor führt ein **Straßennetz** mit Kurven und Kreuzungen zum Haupttor. Die Toten laufen **lieber auf Straßen**;
+  querfeldein geht, ist aber langsamer.
+- **Feste Hindernisse** je Typ (Häuserblöcke, Bach, Gleisdamm, Hallen) erzwingen Umwege und schaffen Engstellen.
+- **Bauen ist frei.** Man darf den Weg verlängern oder sperren, aber was im Weg steht, wird angegriffen.
+- Die Außenmauer bleibt angreifbar: Ist das Stadttor stark und ein Mauerstück schwach, brechen sie dort durch.
+- Die Karte wird größer als bisher und lässt sich verschieben und zoomen.
+
+### Gebäude: Jedes hat eine Aufgabe und steht im Weg
+| Art | Gebäude | Aufgabe |
+|---|---|---|
+| Wohnen | Wohnhaus, Notunterkunft, **Bezirkswache** (Herz des Bezirks) | Bewohner = Arbeitskräfte |
+| Versorgung | Gemüsegarten, Acker, Hühnerstall, Brunnen, Regentonne, später Wasserturm | Nahrung, Wasser |
+| Rohstoffe | Holzplatz, Schrottplatz, Steinbruch aus Ruinen, später Generator und Solardach | Holz, Schrott, Stein, Strom |
+| Verarbeitung | Werkstatt, Munitionsbank, Apotheke | Bauteile, Munition, Medizin |
+| Forschung | Werkstattlabor, Bücherei | Wissen für den Techtree |
+| Verteidigung | Türme, Fallen, Barrikaden, Mauern | Kämpfen, bremsen, lenken |
+| Besonderes | Lazarett, Funkturm, Lager | Reparieren, Vorwarnung, Lagerplatz |
+
+Gebäude brauchen **Bewohner** als Besatzung. Ohne Leute arbeitet auch der beste Turm nicht.
+
+### Rohstoffe (viele, aber nach und nach)
+- **Zum Start:** Holz, Schrott, Nahrung, Bewohner.
+- **Über Techtree und Zeitalter dazu:** Stein, Wasser, Strom, Bauteile, Munition, Medizin, Treibstoff, Wissen.
+- So gibt es auf Dauer viel Tiefe, ohne dass der erste Abend überfordert.
+
+### Wenn ein Bezirk fällt
+- Jeder Bezirk hat eine **Bezirkswache**. Wird sie zerstört oder sind alle Bewohner tot, **fällt der Bezirk**.
+- Der Bezirk wird geräumt und **neu gelost** (neuer Typ, neue Karte). Die eigene Chronik bleibt.
+- Bis zum Wiederaufbau ist der Bezirk ein Einfallstor: Die Nachbarn bekommen über ihre Seitentore mehr Besuch.
+- Fällt die **Hauptstadt**, beginnt für alle eine neue Epoche, und alle Bezirke werden neu gelost.
+
+### Die anderen besuchen
+- Über eine **Ringkarte** sieht man alle sieben Bezirke und die Hauptstadt. Ein Tipp auf einen Bezirk öffnet ihn
+  zum Anschauen (nicht zum Bauen), mit der Wiederholung seiner letzten Nacht.
+
 ## 3. Tagesablauf
 
 | Uhrzeit (Europe/Berlin) | Phase | Was passiert |
@@ -282,7 +336,8 @@ Gratis-Grenzen laut Cloudflare (Stand der Doku, wird vor dem Start nochmal gepr�
 | Meilenstein | Inhalt |
 |---|---|
 | **M1: Spielbarer Kern** | Karte mit einem Bezirk, Mauer, Haupttor, Kern, 3 Türme, 3 Gegnertypen, Angriff per Knopf, deterministische Simulation mit Tests |
-| **M2: Mehrspieler** | Ring mit mehreren Bezirken, Seitentore, Queren zum Nachbarn, Einladungslinks, Angriff um 18 Uhr, Wiederholung |
+| **M1b: Lebendiger Bezirk** | Bezirksgenerator mit vier Typen, Stadttor, Straßennetz, feste Hindernisse, größere Karte; Gebäude mit Aufgaben, Holz, Schrott, Nahrung, Bewohner; Bezirkswache |
+| **M2: Mehrspieler** | Ring mit sieben Bezirken, Seitentore, Queren zum Nachbarn, Ringkarte zum Besuchen, Einladungslinks, Angriff um 18 Uhr, Wiederholung, Bezirk fällt und wird neu gelost |
 | **M3: Incremental** | Ressourcen, Offline-Produktion, Bezirksforschung mit den ersten 3 Ästen |
 | **M4: Roguelike** | Fall der Hauptstadt, Erinnerungen, Chronik, Epochen-Modifikatoren |
 | **M5: Friendslop** | Auszeichnungen, Protokoll, Chat, Toröffnen, Wachstunde |

@@ -19,7 +19,7 @@ import {
 import type { Ereignis, Gegner } from '../sim/nacht';
 import type { BauwerkZustand } from '../sim/wege';
 import { type Figur, type Modelle, type StadtModell, type Teil, ladeModelle } from './lader';
-import { type TurmTeile, bauwerk, grenze, kiste, laterne, mat, seitentor, truemmer } from './modelle';
+import { type TurmTeile, bauwerk, grenze, kiste, mat, seitentor, truemmer } from './modelle';
 
 export interface Vorschau {
   i: number;
@@ -432,6 +432,8 @@ export class Renderer3D {
         const w = this.teil(art, kaputt);
         const hoehe = (0.42 + mauerStufe * 0.07) * (0.45 + 0.55 * anteil);
         w.scale.set(1, hoehe, 1);
+        // Die Burgmauer-Modelle laufen von Natur aus von vorn nach hinten, unsere Mauer von links nach rechts
+        w.rotation.y = Math.PI / 2;
         g.add(w);
         if (anteil < 0.75) g.add(truemmer(mauerStufe * 7 + 3));
         break;
@@ -439,6 +441,7 @@ export class Renderer3D {
       case 'haupttor': {
         const rahmen = this.teil('burg/wall-doorway', '#b9b0a4');
         rahmen.scale.set(1, 0.75, 1);
+        rahmen.rotation.y = Math.PI / 2;
         g.add(rahmen);
         if (anteil > 0) {
           const gitter = this.teil('burg/metal-gate', kaputt);
@@ -547,9 +550,13 @@ export class Renderer3D {
           case 'draussen':
             this.kachel('road-straight', x, y, Math.PI / 2, '#8a8580');
             break;
-          case 'rasen':
-            this.kachel('grass', x, y, 0, '#8e9a80');
+          case 'rasen': {
+            // Schlichter Rasen ohne Streifen, jede Kachel einen Hauch anders
+            const r = Math.abs(Math.sin(x * 17.3 + y * 31.7) * 4271.1) % 1;
+            const farbe = new THREE.Color('#4f6b3a').offsetHSL((r - 0.5) * 0.01, (r - 0.5) * 0.04, (r - 0.5) * 0.018);
+            this.statisch.add(kiste(1, BODEN_Y, 1, `#${farbe.getHexString()}`, welt(x, y).x, 0, welt(x, y).z));
             break;
+          }
           case 'weg':
             if (x === TOR_X) this.kachel(laternenZeilen.has(y) ? 'road-straight-lightposts' : 'road-straight', x, y, 0, '#bdb6ad');
             else this.kachel('pavement', x, y, 0, '#c8c0b4');
@@ -577,6 +584,7 @@ export class Renderer3D {
           const eckturm = x === 0 || x === BREITE - 1;
           deko = this.teil(eckturm ? 'burg/tower-square' : 'burg/wall', '#a39b90');
           deko.scale.set(1, eckturm ? 0.95 : 0.75, 1);
+          if (!eckturm) deko.rotation.y = Math.PI / 2;
           if (eckturm && y === ZEILE_AUSSENMAUER + 17) {
             const fahne = this.teil('burg/flag');
             fahne.position.y = 1.25;
@@ -590,11 +598,23 @@ export class Renderer3D {
       }
     }
     // Häuser: jeweils mitten auf ihre 2 x 2 Kacheln
-    const typen: StadtModell[] = ['building-small-a', 'building-small-d', 'building-small-b'];
+    const typen: Teil[] = ['vorstadt/building-type-a', 'vorstadt/building-type-h', 'vorstadt/building-type-c'];
     HAEUSER.forEach((h, n) => {
-      const o = this.kachel(typen[n % typen.length], h.x + (h.b - 1) / 2, h.y + (h.h - 1) / 2, Math.PI);
-      o.position.y = BODEN_Y;
-      o.scale.set(h.b * 0.82, 1.25, h.h * 0.82);
+      const mitte = welt(h.x + (h.b - 1) / 2, h.y + (h.h - 1) / 2);
+      const haus = this.teil(typen[n % typen.length]);
+      haus.position.set(mitte.x, BODEN_Y, mitte.z);
+      haus.scale.setScalar(1.35);
+      this.statisch.add(haus);
+      // Jeder Garten etwas anders: Kübel, Bäumchen
+      const kuebel = this.teil('vorstadt/planter');
+      kuebel.position.set(mitte.x - 0.75, BODEN_Y, mitte.z + 0.75);
+      this.statisch.add(kuebel);
+      if (n !== 1) {
+        const baum = this.teil(n === 0 ? 'vorstadt/tree-large' : 'vorstadt/tree-small');
+        baum.position.set(mitte.x + 0.78, BODEN_Y, mitte.z - 0.72);
+        baum.scale.setScalar(1.4);
+        this.statisch.add(baum);
+      }
       // Mülltonnen neben dem Haus
       const p = welt(h.x + h.b, h.y + h.h - 1);
       for (const dz of [-0.15, 0.12]) {
@@ -602,19 +622,19 @@ export class Renderer3D {
       }
     });
 
-    // Wald und Dunkelheit hinter der Landstraße, Felder an den Seiten
-    // Wald ohne Schattenwurf, dahinter verschluckt der Nebel alles
-    const wald = (o: THREE.Object3D) => o.traverse((m) => (m.castShadow = false));
-    for (let y = -3; y < 0; y++) {
-      for (let x = -2; x < BREITE + 2; x++) {
-        const r = Math.abs(Math.sin(x * 12.9898 + y * 78.233) * 43758.5453) % 1;
-        wald(this.kachel(r < 0.7 ? 'grass-trees-tall' : 'grass-trees', x, y, Math.floor(r * 4) * (Math.PI / 2), '#5d6b55'));
-      }
-    }
+    // Hinter der Landstraße der Friedhof, an den Seiten dunkler Kiefernwald (ohne Schattenwurf, spart Leistung)
+    this.friedhof();
     for (let y = 0; y < HOEHE; y++) {
       for (const x of [-2, -1, BREITE, BREITE + 1]) {
         const r = Math.abs(Math.sin(x * 4.1 + y * 7.7) * 9871.3) % 1;
-        wald(this.kachel(r < 0.45 ? 'grass-trees-tall' : r < 0.8 ? 'grass-trees' : 'grass', x, y, Math.floor(r * 4) * (Math.PI / 2), '#66735d'));
+        this.kachel('grass', x, y, 0, '#5d6b55');
+        const baum = this.teil(r < 0.5 ? 'friedhof/pine' : 'friedhof/pine-crooked', '#9aa58f');
+        const p = welt(x, y);
+        baum.position.set(p.x + (r - 0.5) * 0.3, BODEN_Y, p.z);
+        baum.rotation.y = r * 6.28;
+        baum.scale.setScalar(0.5 + r * 0.15);
+        baum.traverse((m) => (m.castShadow = false));
+        this.statisch.add(baum);
       }
     }
     const umland = new THREE.Mesh(new THREE.PlaneGeometry(90, 90), mat('#2a3326'));
@@ -637,16 +657,21 @@ export class Renderer3D {
     const rathaus = this.kachel('building-small-c', TOR_X, HOEHE + 3, Math.PI);
     rathaus.position.y = BODEN_Y;
     rathaus.scale.set(1.6, 1.7, 1.2);
-    const brunnen = this.kachel('pavement-fountain', 3, HOEHE - 1, 0, '#d9c8b0');
-    brunnen.position.y = 0;
-
-    // Laternen am Weg in der Hauptstadt
-    for (const x of [2, 10]) {
-      const l = laterne();
-      const p = welt(x, HOEHE - 2);
-      l.position.set(p.x, BODEN_Y, p.z - 0.3);
-      this.statisch.add(l);
-    }
+    // Marktplatz der Hauptstadt
+    const markt = (n: Teil, x: number, y: number, dreh: number, skala: number) => {
+      const o = this.teil(n);
+      const p = welt(x, y);
+      o.position.set(p.x, BODEN_Y, p.z);
+      o.rotation.y = dreh;
+      o.scale.setScalar(skala);
+      this.statisch.add(o);
+    };
+    markt('markt/fountain-round', 3, HOEHE - 1.1, 0, 0.6);
+    markt('markt/stall-red', 0.6, HOEHE + 0.4, Math.PI / 2, 0.8);
+    markt('markt/stall-green', 11.4, HOEHE + 0.4, -Math.PI / 2, 0.8);
+    markt('markt/cart', 8.6, HOEHE + 0.5, 0.5, 0.75);
+    for (const x of [1.6, 10.4]) markt('markt/lantern', x, HOEHE - 2.4, 0, 0.65);
+    markt('stadtrand/detail-dumpster-closed', 12.1, HOEHE + 1.3, -Math.PI / 2, 0.9);
     this.endzeitDeko();
     this.verschmelzeStatisch();
 
@@ -685,13 +710,15 @@ export class Renderer3D {
     setze(this.teil('autos/debris-tire'), 4.2, 1.3, 0.8, 0.45, BODEN_Y + 0.13);
     setze(this.teil('autos/debris-door'), 5.4, 0.2, 1.2, 0.45);
     setze(this.teil('autos/cone'), 3.3, 1.4, 0, 0.35);
+    setze(this.teil('stadtrand/detail-barrier-strong-damaged'), 6.4, 1.3, 0.1, 0.8);
+    setze(this.teil('stadtrand/detail-barrier-strong-type-a'), 7.2, 1.35, -0.1, 0.8);
     setze(this.teil('autos/cone'), 9.7, 1.5, 0, 0.35);
     // Notlager der Geflüchteten in der Hauptstadt
     const unten = HOEHE;
-    setze(this.teil('ueberleben/tent'), 1.2, unten + 0.3, 0.4, 1.1);
-    setze(this.teil('ueberleben/tent'), 2.4, unten + 0.6, -0.3, 1.1);
-    setze(this.teil('ueberleben/tent'), 10.6, unten + 0.4, 0.2, 1.1);
-    setze(this.teil('ueberleben/campfire-pit'), 1.8, unten - 0.6, 0, 1.4);
+    setze(this.teil('ueberleben/tent'), 1.4, unten + 1.6, 0.4, 1.1);
+    setze(this.teil('ueberleben/tent'), 2.6, unten + 1.8, -0.3, 1.1);
+    setze(this.teil('ueberleben/tent'), 10.4, unten + 1.7, 0.2, 1.1);
+    setze(this.teil('ueberleben/campfire-pit'), 2, unten + 0.9, 0, 1.4);
     setze(this.teil('ueberleben/workbench'), 9.2, unten - 0.35, Math.PI, 1.3);
     setze(this.teil('ueberleben/barrel'), 7.6, HOEHE - 1.6, 0, 1.2);
     setze(this.teil('ueberleben/barrel'), 7.9, HOEHE - 1.4, 0, 1.2);
@@ -700,13 +727,66 @@ export class Renderer3D {
     setze(this.teil('ueberleben/signpost'), TOR_X + 0.6, ZEILE_AUSSENMAUER + 1.2, Math.PI, 1.3);
     // Lagerfeuer-Schein
     const feuer = new THREE.PointLight('#ff9a40', 0, 3, 1.6);
-    const p = welt(1.8, unten - 0.6);
+    const p = welt(2, unten + 0.9);
     feuer.position.set(p.x, 0.5, p.z);
     this.lagerfeuer = feuer;
     this.szene.add(feuer);
   }
 
   private lagerfeuer: THREE.PointLight | null = null;
+
+  /** Der Friedhof hinter der Landstraße. Von hier kommen sie. */
+  private friedhof(): void {
+    const setze = (n: Teil, x: number, y: number, dreh = 0, skala = 1, schatten = true) => {
+      const o = this.teil(n);
+      const p = welt(x, y);
+      o.position.set(p.x, BODEN_Y, p.z);
+      o.rotation.y = dreh;
+      o.scale.setScalar(skala);
+      if (!schatten) o.traverse((m) => (m.castShadow = false));
+      this.statisch.add(o);
+      return o;
+    };
+    for (let y = -6; y < 0; y++) {
+      for (let x = -2; x < BREITE + 2; x++) this.kachel('grass', x, y, 0, y >= -4 ? '#55604c' : '#4a5543');
+    }
+    // Eisenzaun zur Straße, mit Tor gegenüber dem Haupttor
+    for (let x = -2; x < BREITE + 2; x++) {
+      setze(x === TOR_X ? 'friedhof/iron-fence-border-gate' : 'friedhof/iron-fence', x, -1, Math.PI, 1);
+    }
+    // Gräberreihen
+    const steine: Teil[] = ['friedhof/gravestone-cross', 'friedhof/gravestone-round', 'friedhof/gravestone-bevel', 'friedhof/gravestone-broken'];
+    for (let y = -2; y >= -4; y--) {
+      for (let x = 0; x < BREITE; x++) {
+        if (x === TOR_X || (x <= 3 && y <= -3) || (x >= 9 && y <= -3)) continue;
+        const r = Math.abs(Math.sin(x * 7.1 + y * 3.7) * 1371.3) % 1;
+        if (r < 0.18) continue;
+        setze(steine[Math.floor(r * steine.length)], x + (r - 0.5) * 0.2, y - 0.25, (r - 0.5) * 0.3, 0.75);
+        setze('friedhof/grave', x, y + 0.15, 0, 0.55, false);
+      }
+    }
+    setze('friedhof/crypt-small', 1.6, -3.6, 0, 1.2);
+    setze('friedhof/crypt', 10.4, -3.5, 0, 1.3);
+    setze('friedhof/lightpost-single', TOR_X - 0.8, -1.3, 0, 0.7);
+    setze('friedhof/fire-basket', TOR_X + 0.8, -1.3, 0, 1);
+    setze('friedhof/pumpkin-carved', 4.3, -1.5, 0.4, 0.9);
+    setze('friedhof/pumpkin-carved', 8.6, -1.6, -0.6, 0.8);
+    // Dahinter dunkler Wald
+    for (let y = -6; y <= -5; y++) {
+      for (let x = -2; x < BREITE + 2; x++) {
+        const r = Math.abs(Math.sin(x * 12.9898 + y * 78.233) * 43758.5453) % 1;
+        setze(r < 0.5 ? 'friedhof/pine' : 'friedhof/pine-crooked', x + (r - 0.5) * 0.4, y, r * 6.28, 0.55 + r * 0.2, false);
+      }
+    }
+    // Schein vom Feuerkorb
+    const glut = new THREE.PointLight('#ff8a3a', 0, 3.5, 1.6);
+    const p = welt(TOR_X + 0.8, -1.3);
+    glut.position.set(p.x, 0.5, p.z);
+    this.feuerkorb = glut;
+    this.szene.add(glut);
+  }
+
+  private feuerkorb: THREE.PointLight | null = null;
 
   private figur(name: Figur): { obj: THREE.Object3D; mixer: THREE.AnimationMixer; aktionen: Map<string, THREE.AnimationAction> } {
     const vorlage = this.modelle!.figuren[name];
@@ -962,6 +1042,7 @@ export class Renderer3D {
     const flackern = 1 + Math.sin(sekunden * 11) * 0.06 + Math.sin(sekunden * 23) * 0.04;
     for (const l of this.laternenLichter) l.intensity = (0.4 + n * 5) * flackern;
     this.kernLicht.intensity = (0.5 + n * 6) * flackern;
+    if (this.feuerkorb) this.feuerkorb.intensity = (0.4 + n * 3.5) * (1 + Math.sin(sekunden * 13 + 1) * 0.15);
     if (this.lagerfeuer) this.lagerfeuer.intensity = (0.3 + n * 3) * (1 + Math.sin(sekunden * 17) * 0.15);
   }
 
