@@ -3,54 +3,69 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
-    <meta name="theme-color" content="#121016" />
+    <meta name="theme-color" content="#1b1520" />
     <title>Protect the Capital</title>
   </head>
   <body>
     <div id="app">
-      <header id="hud">
-        <div class="wert" id="hud-nacht">Tag 1</div>
-        <div class="wert" id="hud-schrott" title="Schrott">⚙ 0</div>
-        <div class="kern">
-          <div class="kern-titel">Hauptstadt</div>
-          <div class="kern-balken"><div id="hud-kern"></div></div>
+      <header id="hud" class="holz">
+        <div class="plakette">
+          <img id="symbol-tag" class="symbol" alt="" />
+          <span id="hud-nacht">Tag 1</span>
         </div>
-        <button id="menue-knopf" class="klein" aria-label="Menü">☰</button>
+        <div class="plakette" title="Schrott">
+          <img id="symbol-schrott" class="symbol" alt="" />
+          <span id="hud-schrott">0</span>
+        </div>
+        <div class="kern">
+          <img id="symbol-kern" class="symbol" alt="" />
+          <div class="balken"><div id="hud-kern" class="balken-fuellung"></div></div>
+        </div>
+        <button id="menue-knopf" class="rund" aria-label="Menü"><span></span><span></span><span></span></button>
       </header>
 
       <main id="buehne">
         <canvas id="karte"></canvas>
-        <div id="toast" hidden></div>
-        <div id="nacht-anzeige" hidden></div>
+        <div id="toast" class="plakette schwebend" hidden></div>
+        <div id="nacht-anzeige" class="plakette" hidden></div>
+        <div id="laden">
+          <div class="banner"><span>Protect the Capital</span></div>
+          <p>Die Toten werden geweckt …</p>
+        </div>
       </main>
 
-      <footer id="leiste">
-        <div id="info">Wähle unten ein Bauwerk und tippe auf ein Feld.</div>
+      <footer id="leiste" class="holz">
+        <div id="info" class="papier">Wähle unten ein Bauwerk und tippe auf ein Feld.</div>
         <div id="werkzeuge"></div>
         <div id="nacht-steuerung" hidden>
-          <button id="tempo" class="klein">Tempo 1×</button>
-          <button id="ueberspringen" class="klein">Bis zum Morgen</button>
+          <button id="tempo" class="knopf">Tempo 1×</button>
+          <button id="ueberspringen" class="knopf">Bis zum Morgen</button>
         </div>
-        <button id="nacht-knopf" class="gross">Nacht 1 starten</button>
+        <button id="nacht-knopf" class="knopf-rot">Nacht 1 starten</button>
       </footer>
     </div>
 
     <dialog id="bilanz">
-      <h2 id="bilanz-titel"></h2>
-      <div id="bilanz-inhalt"></div>
-      <button id="bilanz-weiter" class="gross">Weiter</button>
+      <div class="banner"><span id="bilanz-titel"></span></div>
+      <div class="papier inhalt">
+        <div id="bilanz-inhalt"></div>
+      </div>
+      <button id="bilanz-weiter" class="knopf-rot">Weiter</button>
     </dialog>
 
     <dialog id="menue">
-      <h2>Menü</h2>
-      <p class="leise">Protect the Capital, Meilenstein 1. Ein Bezirk, ein Tor, viele Tote.</p>
-      <h3>Einstellungen</h3>
-      <label class="schalter"><input type="checkbox" id="ton-schalter" /> Ton</label>
-      <h3>Bestiarium</h3>
-      <div id="bestiarium"></div>
-      <p class="leise">Grafik und Töne: Kenney (kenney.nl), CC0. Danke!</p>
-      <button id="neu-anfangen" class="gefahr">Spiel neu anfangen</button>
-      <button id="menue-zu" class="gross">Schließen</button>
+      <div class="banner"><span>Menü</span></div>
+      <button id="menue-zu" class="schliessen" aria-label="Schließen"></button>
+      <div class="papier inhalt">
+        <h3>Einstellungen</h3>
+        <label class="schalter"><input type="checkbox" id="ton-schalter" /> <span>Ton</span></label>
+        <h3>Bestiarium</h3>
+        <div id="bestiarium"></div>
+        <h3>Über das Spiel</h3>
+        <p class="leise">Protect the Capital, Meilenstein 1. Ein Bezirk, ein Tor, viele Tote.</p>
+        <p class="leise">Grafik und Töne: Kenney (kenney.nl), CC0. Danke!</p>
+      </div>
+      <button id="neu-anfangen" class="knopf-grau">Spiel neu anfangen</button>
     </dialog>
 
     <script type="module" src="/src/main.ts"></script>

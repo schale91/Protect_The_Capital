@@ -16,6 +16,13 @@ import {
   verstaerkeMauer,
 } from './sim/spielstand';
 import { bautenAusEingabe, laufweg } from './sim/vorschau';
+import goldSterne from './ui/abzeichen/gold-sterne.png';
+import goldWinkel from './ui/abzeichen/gold-winkel.png';
+import silberWinkel from './ui/abzeichen/silber-winkel.png';
+import bronzeKleeblatt from './ui/abzeichen/bronze-kleeblatt.png';
+import bronzeStreifen from './ui/abzeichen/bronze-streifen.png';
+import schwarzRaute from './ui/abzeichen/schwarz-raute.png';
+import schwarzFluegel from './ui/abzeichen/schwarz-fluegel.png';
 import { setzeTon, spiele, tonAn, tonStarten, toeneFuer } from './ton';
 
 // Ton darf erst nach der ersten Berührung starten
@@ -53,9 +60,9 @@ function tagNeuBerechnen(): void {
 
 function hud(): void {
   $('hud-nacht').textContent = sim ? `Nacht ${stand.nacht}` : `Tag ${stand.nacht}`;
-  $('hud-schrott').textContent = `⚙ ${stand.schrott}`;
+  $('hud-schrott').textContent = `${stand.schrott}`;
   const hp = sim ? Math.max(0, sim.kernHp) : stand.kernHp;
-  $('hud-kern').style.width = `${(100 * hp) / stand.kernMax}%`;
+  $('hud-kern').style.width = `calc(${(100 * hp) / stand.kernMax}% + 16px)`;
   $('hud-kern').title = `${Math.ceil(hp)} von ${stand.kernMax}`;
   $<HTMLButtonElement>('nacht-knopf').textContent = `Nacht ${stand.nacht} starten`;
   for (const knopf of document.querySelectorAll<HTMLButtonElement>('.werkzeug')) {
@@ -83,25 +90,27 @@ function info(html: string): void {
 
 // ---------- Werkzeuge ----------
 
+let schrottBild = '';
+
 function werkzeugLeiste(): void {
   const leiste = $('werkzeuge');
   leiste.innerHTML = '';
   const eintraege: Array<{ w: Werkzeug; name: string; preis: string; bild: string }> = BAUBAR.map((id) => ({
     w: id,
     name: BAUTEN[id].name.replace('Molotow-Werfer', 'Molotow').replace('Armbrustturm', 'Armbrust'),
-    preis: `${BAUTEN[id].kosten}`,
+    preis: `<img alt="" src="${schrottBild}">${BAUTEN[id].kosten}`,
     bild: renderer.bildVon(id),
   }));
   eintraege.push({
     w: 'verstaerken',
     name: 'Mauer',
-    preis: 'ab 15',
+    preis: `<img alt="" src="${schrottBild}">15+`,
     bild: renderer.bildVon('verstaerken'),
   });
   eintraege.push({
     w: 'abreissen',
     name: 'Abreißen',
-    preis: '+50 %',
+    preis: '½ zurück',
     bild: renderer.bildVon('abreissen'),
   });
   for (const e of eintraege) {
@@ -270,6 +279,20 @@ function nachtVorbei(b: Nachtbilanz): void {
   hud();
 }
 
+/** Abzeichen (Kenney Ranks Pack) zu jeder Ehrung. */
+function abzeichen(titel: string): string {
+  const liste: Array<[string, string]> = [
+    ['Weiße Weste', goldSterne],
+    ['Fließband', goldWinkel],
+    ['Fleißigstes', silberWinkel],
+    ['Nasenklammer', bronzeKleeblatt],
+    ['Brennholz', bronzeStreifen],
+    ['Tür auf', schwarzRaute],
+    ['Licht aus', schwarzFluegel],
+  ];
+  return liste.find(([anfang]) => titel.startsWith(anfang))?.[1] ?? silberWinkel;
+}
+
 function zeigeBilanz(b: Nachtbilanz): void {
   const titel =
     b.ausgang === 'gefallen'
@@ -282,15 +305,20 @@ function zeigeBilanz(b: Nachtbilanz): void {
   for (const t of GEGNER_REIHENFOLGE) {
     if (b.getoetet[t]) zeilen.push(`<span>${GEGNER[t].name} erledigt</span><span class="zahl">${b.getoetet[t]}</span>`);
   }
-  zeilen.push(`<span>Bis zur Hauptstadt durchgekommen</span><span class="zahl">${b.durchgekommen}</span>`);
-  zeilen.push(`<span>Schaden an der Hauptstadt</span><span class="zahl">${b.kernSchaden}</span>`);
-  zeilen.push(`<span>Schrott von den Toten</span><span class="zahl">+${b.schrott}</span>`);
-  if (b.ausgang !== 'gefallen') zeilen.push(`<span>Sammler über Tag</span><span class="zahl">+30</span>`);
+  zeilen.push(`<span>Bis zur Hauptstadt durchgekommen</span><span class="zahl${b.durchgekommen ? ' minus' : ''}">${b.durchgekommen}</span>`);
+  zeilen.push(`<span>Schaden an der Hauptstadt</span><span class="zahl${b.kernSchaden ? ' minus' : ''}">${b.kernSchaden ? '-' : ''}${b.kernSchaden}</span>`);
+  zeilen.push(`<span>Schrott von den Toten</span><span class="zahl plus">+${b.schrott}</span>`);
+  if (b.ausgang !== 'gefallen') zeilen.push(`<span>Sammler über Tag</span><span class="zahl plus">+30</span>`);
   const zerstoert = Object.entries(b.zerstoert)
     .filter(([id]) => id !== 'aussenmauer' && id !== 'haupttor')
     .map(([id, n]) => `${n}× ${BAUTEN[id as BauId].name}`);
   if (zerstoert.length) zeilen.push(`<span>Verloren</span><span class="zahl">${zerstoert.join(', ')}</span>`);
-  const ehrungen = b.auszeichnungen.map((a) => `<div class="ehrung">${a}</div>`).join('');
+  const ehrungen = b.auszeichnungen
+    .map((a) => {
+      const [titel, ...rest] = a.split(': ');
+      return `<div class="ehrung"><img alt="" src="${abzeichen(titel)}"><div><b>${titel}</b>${rest.join(': ')}</div></div>`;
+    })
+    .join('');
   const gefallen =
     b.ausgang === 'gefallen'
       ? `<p class="leise">Alle fangen gemeinsam von vorn an. Ab einem der nächsten Meilensteine bleiben Erinnerungen,
@@ -386,7 +414,16 @@ function schleife(jetzt: number): void {
 }
 
 hud();
-void renderer.bereit.then(() => werkzeugLeiste());
+void renderer.bereit.then(() => {
+  schrottBild = renderer.bildVon('autos/debris-tire');
+  $<HTMLImageElement>('symbol-schrott').src = schrottBild;
+  $<HTMLImageElement>('symbol-tag').src = renderer.bildVon('schlurfi');
+  $<HTMLImageElement>('symbol-kern').src = renderer.bildVon('burg/flag');
+  werkzeugLeiste();
+  hud();
+  $('laden').classList.add('weg');
+  setTimeout(() => $('laden').remove(), 700);
+});
 if (stand.gefallen && stand.letzteBilanz) zeigeBilanz(stand.letzteBilanz);
 else if (stand.nacht === 1 && Object.keys(stand.bauten).length === 0) {
   info('<b>Willkommen in deinem Bezirk.</b> Um 18 Uhr kommen die Toten von oben. Bau Türme zwischen Mauer und Tor, dann starte die Nacht.');
