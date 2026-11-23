@@ -29,12 +29,24 @@ export const FIGUREN = [
   'character-male-a',
 ] as const;
 
+/** Weitere Kenney-Pakete (CC0), je Ordner mit eigener Farbtextur. */
+export const BAUSAETZE = {
+  burg: ['wall', 'wall-half', 'wall-narrow-wood', 'wall-doorway', 'metal-gate', 'tower-square', 'flag'],
+  verteidigung: ['tower-square-bottom-a', 'tower-round-bottom-a', 'weapon-ballista', 'weapon-catapult'],
+  ueberleben: ['fence-fortified', 'barrel', 'box', 'box-large', 'campfire-pit', 'tent', 'workbench', 'signpost'],
+  autos: ['sedan', 'taxi', 'police', 'van', 'debris-tire', 'debris-door', 'cone'],
+} as const;
+
+type Bausatz = keyof typeof BAUSAETZE;
+export type Teil = { [K in Bausatz]: `${K}/${(typeof BAUSAETZE)[K][number]}` }[Bausatz];
+
 export type StadtModell = (typeof STADT)[number];
 export type Figur = (typeof FIGUREN)[number];
 
 export interface Modelle {
   stadt: Record<StadtModell, THREE.Object3D>;
   figuren: Record<Figur, { szene: THREE.Object3D; animationen: THREE.AnimationClip[] }>;
+  teile: Record<Teil, THREE.Object3D>;
 }
 
 const basis = import.meta.env.BASE_URL;
@@ -43,6 +55,10 @@ export async function ladeModelle(): Promise<Modelle> {
   const loader = new GLTFLoader();
   const stadt = {} as Modelle['stadt'];
   const figuren = {} as Modelle['figuren'];
+  const teile = {} as Modelle['teile'];
+  const alleTeile = (Object.keys(BAUSAETZE) as Bausatz[]).flatMap((k) =>
+    (BAUSAETZE[k] as readonly string[]).map((n) => `${k}/${n}` as Teil),
+  );
   await Promise.all([
     ...STADT.map(async (n) => {
       const g = await loader.loadAsync(`${basis}modelle/kenney/${n}.glb`);
@@ -53,6 +69,16 @@ export async function ladeModelle(): Promise<Modelle> {
         }
       });
       stadt[n] = g.scene;
+    }),
+    ...alleTeile.map(async (n) => {
+      const g = await loader.loadAsync(`${basis}modelle/${n}.glb`);
+      g.scene.traverse((o) => {
+        if ((o as THREE.Mesh).isMesh) {
+          o.castShadow = true;
+          o.receiveShadow = true;
+        }
+      });
+      teile[n] = g.scene;
     }),
     ...FIGUREN.map(async (n) => {
       const g = await loader.loadAsync(`${basis}modelle/figuren/${n}.glb`);
@@ -65,5 +91,5 @@ export async function ladeModelle(): Promise<Modelle> {
       figuren[n] = { szene: g.scene, animationen: g.animations };
     }),
   ]);
-  return { stadt, figuren };
+  return { stadt, figuren, teile };
 }

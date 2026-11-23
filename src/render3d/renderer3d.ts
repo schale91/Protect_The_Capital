@@ -18,20 +18,8 @@ import {
 } from '../sim/karte';
 import type { Ereignis, Gegner } from '../sim/nacht';
 import type { BauwerkZustand } from '../sim/wege';
-import { type Figur, type Modelle, type StadtModell, ladeModelle } from './lader';
-import {
-  type TurmTeile,
-  aussenmauer,
-  bauwerk,
-  grenze,
-  haupttor,
-  kernmauer,
-  kiste,
-  laterne,
-  mat,
-  seitentor,
-  truemmer,
-} from './modelle';
+import { type Figur, type Modelle, type StadtModell, type Teil, ladeModelle } from './lader';
+import { type TurmTeile, bauwerk, grenze, kiste, laterne, mat, seitentor, truemmer } from './modelle';
 
 export interface Vorschau {
   i: number;
@@ -350,8 +338,11 @@ export class Renderer3D {
     let obj: THREE.Object3D;
     let ziel = new THREE.Vector3(0, 0.45, 0);
     let abstand = 2.1;
-    if (art === 'verstaerken') obj = aussenmauer(2, 1);
-    else if (art === 'abreissen') {
+    if (art === 'verstaerken') {
+      obj = this.bauModell('aussenmauer', 1, 3);
+      ziel = new THREE.Vector3(0, 0.5, 0);
+      abstand = 2.4;
+    } else if (art === 'abreissen') {
       obj = new THREE.Group();
       obj.add(kiste(0.12, 0.7, 0.12, '#8a5a33', 0, 0, 0));
       obj.add(kiste(0.5, 0.22, 0.22, '#8d8d93', 0, 0.62, 0));
@@ -360,7 +351,13 @@ export class Renderer3D {
       obj = this.zombieModell(art as GegnerId).obj;
       ziel = new THREE.Vector3(0, 0.32, 0);
       abstand = 1.5;
-    } else obj = bauwerk(art as BauwerkId, 1);
+    } else {
+      obj = this.bauModell(art as BauwerkId, 1, 0);
+      if (art === 'armbrust' || art === 'molotow') {
+        ziel = new THREE.Vector3(0, 0.55, 0);
+        abstand = 2.5;
+      }
+    }
     s.add(obj);
     const k = new THREE.PerspectiveCamera(30, 1, 0.1, 20);
     k.position.set(abstand * 0.75, abstand * 0.85, abstand);
@@ -403,6 +400,82 @@ export class Renderer3D {
     }
     this.statisch.add(o);
     return o;
+  }
+
+  /** Kopie eines Kenney-Teils, optional eingefärbt. */
+  private teil(name: Teil, faerben?: string): THREE.Object3D {
+    const o = this.modelle!.teile[name].clone();
+    if (faerben) {
+      o.traverse((m) => {
+        const mesh = m as THREE.Mesh;
+        if (mesh.isMesh) mesh.material = this.getoent(mesh.material as THREE.MeshStandardMaterial, faerben);
+      });
+    }
+    return o;
+  }
+
+  /** Bauwerke aus den Kenney-Bausätzen. Ursprung unten mittig auf der Kachel. */
+  bauModell(id: BauwerkId, anteil: number, mauerStufe: number): THREE.Group {
+    const g = new THREE.Group();
+    const teile: TurmTeile = {};
+    g.userData.teile = teile;
+    const kaputt = anteil < 0.5 ? '#8f8a84' : undefined;
+    switch (id) {
+      case 'aussenmauer': {
+        const art: Teil = mauerStufe === 0 ? 'burg/wall-narrow-wood' : mauerStufe <= 2 ? 'burg/wall-half' : 'burg/wall';
+        const w = this.teil(art, kaputt);
+        const hoehe = (0.42 + mauerStufe * 0.07) * (0.45 + 0.55 * anteil);
+        w.scale.set(1, hoehe, 1);
+        g.add(w);
+        if (anteil < 0.75) g.add(truemmer(mauerStufe * 7 + 3));
+        break;
+      }
+      case 'haupttor': {
+        const rahmen = this.teil('burg/wall-doorway', '#b9b0a4');
+        rahmen.scale.set(1, 0.75, 1);
+        g.add(rahmen);
+        if (anteil > 0) {
+          const gitter = this.teil('burg/metal-gate', kaputt);
+          gitter.rotation.y = Math.PI / 2;
+          gitter.scale.set(1.25, 0.95 * (0.35 + 0.65 * anteil), 1.25);
+          g.add(gitter);
+        }
+        break;
+      }
+      case 'armbrust': {
+        g.add(this.teil('verteidigung/tower-square-bottom-a', kaputt));
+        const kopf = new THREE.Group();
+        kopf.position.y = 0.5;
+        kopf.add(this.teil('verteidigung/weapon-ballista'));
+        g.add(kopf);
+        teile.kopf = kopf;
+        break;
+      }
+      case 'molotow': {
+        g.add(this.teil('verteidigung/tower-round-bottom-a', kaputt));
+        const kopf = new THREE.Group();
+        kopf.position.y = 0.6;
+        kopf.add(this.teil('verteidigung/weapon-catapult'));
+        g.add(kopf);
+        teile.kopf = kopf;
+        // Glimmende Lunte, damit man ihn nachts findet
+        const glut = kiste(0.06, 0.06, 0.06, mat('#ffb347', { leuchten: '#ff7a1a', staerke: 2.5 }), 0.28, 0.6, 0.28);
+        glut.castShadow = false;
+        g.add(glut);
+        teile.flammen = [glut];
+        break;
+      }
+      case 'holzwand': {
+        const zaun = this.teil('ueberleben/fence-fortified', kaputt);
+        zaun.scale.set(2, 1.1 * (0.5 + 0.5 * anteil), 2);
+        zaun.position.z = 0.45;
+        g.add(zaun);
+        break;
+      }
+      case 'speerfalle':
+        return bauwerk('speerfalle', anteil);
+    }
+    return g;
   }
 
   private readonly toene = new Map<string, THREE.MeshStandardMaterial>();
@@ -494,7 +567,16 @@ export class Renderer3D {
         let deko: THREE.Object3D | null = null;
         if (b === 'grenze') deko = grenze();
         else if (b === 'seitentor') deko = seitentor();
-        else if (b === 'kernmauer') deko = kernmauer();
+        else if (b === 'kernmauer') {
+          const eckturm = x === 0 || x === BREITE - 1;
+          deko = this.teil(eckturm ? 'burg/tower-square' : 'burg/wall', '#a39b90');
+          deko.scale.set(1, eckturm ? 0.95 : 0.75, 1);
+          if (eckturm && y === ZEILE_AUSSENMAUER + 17) {
+            const fahne = this.teil('burg/flag');
+            fahne.position.y = 1.25;
+            deko.add(fahne);
+          }
+        }
         if (deko) {
           deko.position.set(p.x, BODEN_Y, p.z);
           this.statisch.add(deko);
@@ -559,6 +641,7 @@ export class Renderer3D {
       l.position.set(p.x, BODEN_Y, p.z - 0.3);
       this.statisch.add(l);
     }
+    this.endzeitDeko();
     this.verschmelzeStatisch();
 
     // Bewohner der Hauptstadt, die nervös herumstehen
@@ -578,6 +661,46 @@ export class Renderer3D {
       this.spiele(f, 'idle');
     }
   }
+
+  /** Wracks auf der Landstraße, Notlager in der Hauptstadt. */
+  private endzeitDeko(): void {
+    const setze = (o: THREE.Object3D, x: number, y: number, dreh: number, skala = 1, hoehe = BODEN_Y) => {
+      const p = welt(x, y);
+      o.position.set(p.x, hoehe, p.z);
+      o.rotation.y = dreh;
+      o.scale.multiplyScalar(skala);
+      this.statisch.add(o);
+    };
+    // Liegengebliebene Autos draußen, verrußt
+    setze(this.teil('autos/sedan', '#7d7670'), 1.6, 0.6, Math.PI / 2 + 0.3, 0.36);
+    setze(this.teil('autos/taxi', '#8a8068'), 8.3, 0.4, -Math.PI / 2 + 0.15, 0.36);
+    setze(this.teil('autos/police', '#7a7a80'), 11.2, 1.2, Math.PI / 2 - 0.5, 0.36);
+    setze(this.teil('autos/van', '#6f6a66'), -1.4, 0.8, 0.2, 0.36);
+    setze(this.teil('autos/debris-tire'), 4.2, 1.3, 0.8, 0.45, BODEN_Y + 0.13);
+    setze(this.teil('autos/debris-door'), 5.4, 0.2, 1.2, 0.45);
+    setze(this.teil('autos/cone'), 3.3, 1.4, 0, 0.35);
+    setze(this.teil('autos/cone'), 9.7, 1.5, 0, 0.35);
+    // Notlager der Geflüchteten in der Hauptstadt
+    const unten = HOEHE;
+    setze(this.teil('ueberleben/tent'), 1.2, unten + 0.3, 0.4, 1.1);
+    setze(this.teil('ueberleben/tent'), 2.4, unten + 0.6, -0.3, 1.1);
+    setze(this.teil('ueberleben/tent'), 10.6, unten + 0.4, 0.2, 1.1);
+    setze(this.teil('ueberleben/campfire-pit'), 1.8, unten - 0.6, 0, 1.4);
+    setze(this.teil('ueberleben/workbench'), 9.2, unten - 0.35, Math.PI, 1.3);
+    setze(this.teil('ueberleben/barrel'), 7.6, HOEHE - 1.6, 0, 1.2);
+    setze(this.teil('ueberleben/barrel'), 7.9, HOEHE - 1.4, 0, 1.2);
+    setze(this.teil('ueberleben/box-large'), 4.6, HOEHE - 1.6, 0.3, 1.2);
+    setze(this.teil('ueberleben/box'), 4.9, HOEHE - 1.2, 0.1, 1.2);
+    setze(this.teil('ueberleben/signpost'), TOR_X + 0.6, ZEILE_AUSSENMAUER + 1.2, Math.PI, 1.3);
+    // Lagerfeuer-Schein
+    const feuer = new THREE.PointLight('#ff9a40', 0, 3, 1.6);
+    const p = welt(1.8, unten - 0.6);
+    feuer.position.set(p.x, 0.5, p.z);
+    this.lagerfeuer = feuer;
+    this.szene.add(feuer);
+  }
+
+  private lagerfeuer: THREE.PointLight | null = null;
 
   private figur(name: Figur): { obj: THREE.Object3D; mixer: THREE.AnimationMixer; aktionen: Map<string, THREE.AnimationAction> } {
     const vorlage = this.modelle!.figuren[name];
@@ -664,13 +787,12 @@ export class Renderer3D {
         continue;
       }
       if (alt) this.bauGruppe.remove(alt.obj);
-      const obj =
-        b.id === 'aussenmauer' ? aussenmauer(mauer, stufe / 4) : b.id === 'haupttor' ? haupttor(stufe / 4) : bauwerk(b.id, stufe / 4);
+      const obj = this.bauModell(b.id, stufe / 4, mauer);
       const p = welt(x, Math.floor(i / BREITE));
       obj.position.set(p.x, BODEN_Y, p.z);
       if (b.id === 'holzwand') obj.rotation.y = this.wandDrehung(i, a.bauten);
       const balken = new Balken(0.7, 'gelb');
-      balken.gruppe.position.y = b.id === 'armbrust' ? 1.35 : 1.0;
+      balken.gruppe.position.y = b.id === 'armbrust' || b.id === 'molotow' ? 1.25 : 1.0;
       obj.add(balken.gruppe);
       balken.setze(anteil);
       // Turmkopf behält seine Blickrichtung
@@ -767,7 +889,7 @@ export class Renderer3D {
     rahmen.position.set(p.x, BODEN_Y + 0.02, p.z);
     this.vorschauGruppe.add(rahmen);
     if (v.art === 'verstaerken' || v.art === 'abreissen') return;
-    const geist = bauwerk(v.art, 1);
+    const geist = this.bauModell(v.art, 1, 0);
     const geistMat = new THREE.MeshStandardMaterial({ color: farbe, transparent: true, opacity: 0.55, depthWrite: false });
     geist.traverse((o) => {
       const m = o as THREE.Mesh;
@@ -834,6 +956,7 @@ export class Renderer3D {
     const flackern = 1 + Math.sin(sekunden * 11) * 0.06 + Math.sin(sekunden * 23) * 0.04;
     for (const l of this.laternenLichter) l.intensity = (0.4 + n * 5) * flackern;
     this.kernLicht.intensity = (0.5 + n * 6) * flackern;
+    if (this.lagerfeuer) this.lagerfeuer.intensity = (0.3 + n * 3) * (1 + Math.sin(sekunden * 17) * 0.15);
   }
 
   private aktualisiereEffekte(dt: number, sekunden: number): void {

@@ -304,3 +304,17 @@ dialog h3 {
 [hidden] {
   display: none !important;
 }
+
+.schalter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  padding: 6px 0;
+}
+
+.schalter input {
+  width: 22px;
+  height: 22px;
+  accent-color: var(--gold);
+}

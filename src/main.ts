@@ -16,6 +16,10 @@ import {
   verstaerkeMauer,
 } from './sim/spielstand';
 import { bautenAusEingabe, laufweg } from './sim/vorschau';
+import { setzeTon, spiele, tonAn, tonStarten, toeneFuer } from './ton';
+
+// Ton darf erst nach der ersten Berührung starten
+window.addEventListener('pointerdown', tonStarten, { capture: true });
 
 type Werkzeug = BauId | 'verstaerken' | 'abreissen';
 
@@ -111,6 +115,7 @@ function werkzeugLeiste(): void {
 }
 
 function waehle(w: Werkzeug): void {
+  spiele('klick', 0.4);
   werkzeug = werkzeug === w ? null : w;
   vorschau = null;
   if (!werkzeug) info('Wähle unten ein Bauwerk und tippe auf ein Feld.');
@@ -192,6 +197,7 @@ renderer.beimTippen((x, y) => {
 });
 
 function gebaut(text: string): void {
+  spiele(text.startsWith('Abgerissen') ? 'hacken' : 'holz', 0.5);
   speichere(stand);
   tagNeuBerechnen();
   info(text + ' Die roten Fußspuren zeigen, wo die Toten jetzt langlaufen.');
@@ -233,6 +239,7 @@ $('nacht-knopf').addEventListener('click', () => {
   $('nacht-knopf').hidden = true;
   $('nacht-steuerung').hidden = false;
   $('nacht-anzeige').hidden = false;
+  spiele('glocke2', 0.6);
   info(`<b>Es ist 18 Uhr.</b> ${sim.anzahlGesamt} Tote sind unterwegs. Halte durch!`);
   hud();
 });
@@ -258,6 +265,7 @@ function nachtVorbei(b: Nachtbilanz): void {
   $('nacht-steuerung').hidden = true;
   $('nacht-anzeige').hidden = true;
   zeigeBilanz(b);
+  spiele(b.ausgang === 'gefallen' ? 'glocke' : 'muenzen2', 0.6);
   info('Der Tag bricht an. Mauer und Tor sind geflickt, Zerstörtes musst du neu bauen.');
   hud();
 }
@@ -317,7 +325,13 @@ $('menue-knopf').addEventListener('click', () => {
     d.innerHTML = `<img alt="" src="${bild}"><div><b>${g.name}</b> (ab Nacht ${g.abNacht})<br><span class="leise">${g.text}</span></div>`;
     liste.append(d);
   }
+  $<HTMLInputElement>('ton-schalter').checked = tonAn();
   $<HTMLDialogElement>('menue').showModal();
+});
+
+$('ton-schalter').addEventListener('change', (e) => {
+  setzeTon((e.target as HTMLInputElement).checked);
+  spiele('schalter', 0.5);
 });
 
 $('menue-zu').addEventListener('click', () => $<HTMLDialogElement>('menue').close());
@@ -352,6 +366,7 @@ function schleife(jetzt: number): void {
         rest -= NACHT.dt;
         sim.schritt();
         renderer.ereignisse(sim.ereignisse);
+        toeneFuer(sim.ereignisse);
       }
       $('nacht-anzeige').textContent = `Noch ${sim.nochUnterwegs} Tote`;
       hud();
