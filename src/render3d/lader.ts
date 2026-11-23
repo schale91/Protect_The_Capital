@@ -35,6 +35,25 @@ export const BAUSAETZE = {
   verteidigung: ['tower-square-bottom-a', 'tower-round-bottom-a', 'weapon-ballista', 'weapon-catapult'],
   ueberleben: ['fence-fortified', 'barrel', 'box', 'box-large', 'campfire-pit', 'tent', 'workbench', 'signpost'],
   autos: ['sedan', 'taxi', 'police', 'van', 'debris-tire', 'debris-door', 'cone'],
+  friedhof: [
+    'crypt',
+    'crypt-small',
+    'gravestone-cross',
+    'gravestone-round',
+    'gravestone-broken',
+    'gravestone-bevel',
+    'grave',
+    'iron-fence',
+    'iron-fence-border-gate',
+    'pine-crooked',
+    'pine',
+    'lightpost-single',
+    'fire-basket',
+    'pumpkin-carved',
+  ],
+  vorstadt: ['building-type-a', 'building-type-c', 'building-type-h', 'building-type-m', 'planter', 'tree-small', 'tree-large'],
+  markt: ['stall-red', 'stall-green', 'cart', 'fountain-round', 'lantern'],
+  stadtrand: ['detail-dumpster-closed', 'detail-barrier-strong-damaged', 'detail-barrier-strong-type-a'],
 } as const;
 
 type Bausatz = keyof typeof BAUSAETZE;
