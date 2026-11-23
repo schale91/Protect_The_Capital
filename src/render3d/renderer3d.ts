@@ -8,17 +8,44 @@ import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { BAUTEN, type BauwerkId, GEGNER, type GegnerId } from '../sim/data';
 import {
   BREITE,
-  GRUNDKARTE,
-  HAEUSER,
+  INNEN_OBEN,
+  INNEN_UNTEN,
+  type Karte,
+  imFeld,
   HOEHE,
   TOR_X,
   ZEILE_AUSSENMAUER,
+  ZEILE_KERNMAUER,
+  ZEILE_SEITENTOR,
   idx,
   istKern,
 } from '../sim/karte';
 import type { Ereignis, Gegner } from '../sim/nacht';
 import type { BauwerkZustand } from '../sim/wege';
 import { type Figur, type Modelle, type StadtModell, type Teil, ladeModelle } from './lader';
+import {
+  type Kasten,
+  type Richtung,
+  andreaskreuz,
+  baumarkt,
+  bezirkswache,
+  container,
+  drehungFuer,
+  garten,
+  gleis,
+  halle,
+  hecke,
+  holzplatz,
+  kirchenschiff,
+  ruine,
+  scheune,
+  schrottplatz,
+  schrottpresse,
+  turm,
+  wassermuehle,
+  wohnhaus,
+  zufall,
+} from './bezirk3d';
 import { type TurmTeile, bauwerk, grenze, kiste, mat, seitentor, truemmer } from './modelle';
 
 export interface Vorschau {
@@ -42,6 +69,13 @@ export function welt(x: number, y: number): THREE.Vector3 {
 }
 
 const BODEN_Y = 0.06;
+
+/** Welche Richtungen die Kenney-Straßenteile ohne Drehung verbinden (aus den Modellen abgelesen). */
+const STRASSE_BASIS: Record<'gerade' | 'kurve' | 'einmuendung', Richtung[]> = {
+  gerade: ['N', 'S'],
+  kurve: ['S', 'O'],
+  einmuendung: ['O', 'W', 'S'],
+};
 
 interface Zombie3D {
   obj: THREE.Object3D;
@@ -239,11 +273,25 @@ export class Renderer3D {
     this.steuerung();
     this.bereit = ladeModelle().then((m) => {
       this.modelle = m;
-      this.baueWelt();
+      this.baueUmgebung();
+      if (this.karte) this.baueBezirk(this.karte);
     });
   }
 
   // ---------- Öffentliche Schnittstelle ----------
+
+  /** Neuer oder anderer Bezirk: Gelände neu aufbauen. */
+  setzeKarte(k: Karte): void {
+    if (this.karte && this.karte.seed === k.seed && this.karte.typ === k.typ) return;
+    this.karte = k;
+    for (const b of this.bauten.values()) this.bauGruppe.remove(b.obj);
+    this.bauten.clear();
+    if (this.modelle) this.baueBezirk(k);
+  }
+
+  private karte: Karte | null = null;
+  private readonly wasserMat = new THREE.MeshStandardMaterial({ color: '#3c78a6', roughness: 0.25, metalness: 0.1, flatShading: true });
+  private readonly bezirkGruppe = new THREE.Group();
 
   beimTippen(f: (x: number, y: number) => void): void {
     this.tippen = f;
@@ -421,7 +469,7 @@ export class Renderer3D {
   }
 
   /** Bauwerke aus den Kenney-Bausätzen. Ursprung unten mittig auf der Kachel. */
-  bauModell(id: BauwerkId, anteil: number, mauerStufe: number): THREE.Group {
+  bauModell(id: BauwerkId, anteil: number, mauerStufe: number, i = -1): THREE.Group {
     const g = new THREE.Group();
     const teile: TurmTeile = {};
     g.userData.teile = teile;
@@ -438,8 +486,9 @@ export class Renderer3D {
         if (anteil < 0.75) g.add(truemmer(mauerStufe * 7 + 3));
         break;
       }
+      case 'stadttor':
       case 'haupttor': {
-        const rahmen = this.teil('burg/wall-doorway', '#b9b0a4');
+        const rahmen = this.teil('burg/wall-doorway', id === 'stadttor' ? '#d7c3a0' : '#b9b0a4');
         rahmen.scale.set(1, 0.75, 1);
         rahmen.rotation.y = Math.PI / 2;
         g.add(rahmen);
@@ -483,8 +532,72 @@ export class Renderer3D {
       }
       case 'speerfalle':
         return bauwerk('speerfalle', anteil);
+      case 'wohnhaus':
+        g.add(wohnhaus(this.kasten, this.karte?.typ ?? 'vorstadt', i, this.tuerRichtung(i)));
+        break;
+      case 'garten':
+        g.add(garten(this.kasten, i));
+        break;
+      case 'holzplatz':
+        g.add(holzplatz(this.kasten));
+        break;
+      case 'schrottplatz':
+        g.add(schrottplatz(this.kasten));
+        break;
+      case 'bezirkswache':
+        g.add(bezirkswache(this.kasten));
+        break;
+      case 'glockenturm':
+        g.add(turm(this.kasten, 'kirche'));
+        break;
+      case 'baumarkt':
+        g.add(baumarkt(this.kasten));
+        break;
+      case 'schrottpresse':
+        g.add(schrottpresse(this.kasten));
+        break;
+      case 'wassermuehle': {
+        const m = wassermuehle(this.kasten);
+        g.add(m.gruppe);
+        teile.rad = m.rad;
+        break;
+      }
     }
+    if (anteil < 0.5 && id !== 'aussenmauer' && id !== 'stadttor' && id !== 'haupttor') g.add(truemmer(i + 11));
     return g;
+  }
+
+  private readonly kasten: Kasten = { teil: (n, f) => this.teil(n, f) };
+
+  /** Haustüren zeigen zur nächsten Straße, sonst nach Süden. */
+  private tuerRichtung(i: number): Richtung {
+    if (i < 0 || !this.karte) return 'S';
+    const x = i % BREITE;
+    const y = Math.floor(i / BREITE);
+    const proben: Array<[Richtung, number, number]> = [['S', 0, 1], ['O', 1, 0], ['W', -1, 0], ['N', 0, -1]];
+    for (const [r, dx, dy] of proben) {
+      if (imFeld(x + dx, y + dy) && this.istStrasse(x + dx, y + dy)) return r;
+    }
+    return 'S';
+  }
+
+  private istStrasse(x: number, y: number): boolean {
+    if (!this.karte) return false;
+    if (y === ZEILE_AUSSENMAUER) return x === this.karte.stadttorX;
+    if (y === ZEILE_KERNMAUER) return x === TOR_X;
+    if (!imFeld(x, y)) return false;
+    const b = this.karte.boden[idx(x, y)];
+    return b === 'strasse' || b === 'uebergang' || (b === 'bruecke' && this.brueckeAufStrasse(x, y));
+  }
+
+  private brueckeAufStrasse(x: number, y: number): boolean {
+    const k = this.karte!;
+    for (const dy of [-1, 1]) {
+      let yy = y + dy;
+      while (imFeld(x, yy) && (k.boden[idx(x, yy)] === 'bruecke' || k.boden[idx(x, yy)] === 'wasser')) yy += dy;
+      if (imFeld(x, yy) && k.boden[idx(x, yy)] === 'strasse') return true;
+    }
+    return false;
   }
 
   private readonly toene = new Map<string, THREE.MeshStandardMaterial>();
@@ -506,7 +619,7 @@ export class Renderer3D {
    * Fasst alle festen Teile der Landschaft zu wenigen großen Meshes zusammen (eins je Material und Schattenart).
    * Aus über tausend Zeichenaufrufen werden so ein paar Dutzend.
    */
-  private verschmelzeStatisch(): void {
+  private verschmelzeStatisch(ziel: THREE.Object3D = this.szene): void {
     this.statisch.updateMatrixWorld(true);
     const eimer = new Map<string, { material: THREE.Material; schatten: boolean; geos: THREE.BufferGeometry[] }>();
     this.statisch.traverse((o) => {
@@ -536,56 +649,191 @@ export class Renderer3D {
       const mesh = new THREE.Mesh(geo, e.material);
       mesh.castShadow = e.schatten;
       mesh.receiveShadow = true;
-      this.szene.add(mesh);
+      ziel.add(mesh);
     }
     this.statisch.clear();
   }
 
-  private baueWelt(): void {
-    const laternenZeilen = new Set([5, 11, 17]);
-    for (let y = 0; y < HOEHE; y++) {
-      for (let x = 0; x < BREITE; x++) {
-        const b = GRUNDKARTE[idx(x, y)];
+  /** Das Gelände des Bezirks. Wird neu gebaut, wenn ein neuer Bezirk gelost wird. */
+  private baueBezirk(k: Karte): void {
+    for (const c of [...this.bezirkGruppe.children]) {
+      this.bezirkGruppe.remove(c);
+      (c as THREE.Mesh).geometry?.dispose();
+    }
+    if (!this.bezirkGruppe.parent) this.szene.add(this.bezirkGruppe);
+    const setze = (o: THREE.Object3D, x: number, y: number, hoehe = BODEN_Y) => {
+      const p = welt(x, y);
+      o.position.x += p.x;
+      o.position.z += p.z;
+      o.position.y += hoehe;
+      this.statisch.add(o);
+      return o;
+    };
+    const boden = (x: number, y: number) => (imFeld(x, y) ? k.boden[idx(x, y)] : 'grenze');
+    // Schon einmal gesetzte Kirchen-, Hallen- und Scheunenblöcke merken, damit nur ein Turm entsteht
+    let kirchturm = false;
+    for (let y = INNEN_OBEN; y <= INNEN_UNTEN; y++) {
+      for (let x = 1; x < BREITE - 1; x++) {
+        const b = boden(x, y);
+        const r = zufall(x, y, k.seed % 97);
         switch (b) {
-          case 'draussen':
-            this.kachel('road-straight', x, y, Math.PI / 2, '#8a8580');
-            break;
-          case 'rasen': {
-            // Schlichter Rasen ohne Streifen, jede Kachel einen Hauch anders
-            const r = Math.abs(Math.sin(x * 17.3 + y * 31.7) * 4271.1) % 1;
+          case 'rasen':
+          case 'hecke': {
             const farbe = new THREE.Color('#4f6b3a').offsetHSL((r - 0.5) * 0.01, (r - 0.5) * 0.04, (r - 0.5) * 0.018);
-            this.statisch.add(kiste(1, BODEN_Y, 1, `#${farbe.getHexString()}`, welt(x, y).x, 0, welt(x, y).z));
+            setze(kiste(1, BODEN_Y, 1, `#${farbe.getHexString()}`), x, y, 0);
+            if (b === 'hecke') setze(hecke(boden(x - 1, y) === 'hecke' || boden(x + 1, y) === 'hecke'), x, y);
+            else if (r < 0.06) {
+              const blume = this.teil(r < 0.03 ? 'natur/flower_redA' : 'natur/flower_yellowA');
+              blume.position.set((r - 0.03) * 8, 0, 0.3);
+              setze(blume, x, y);
+            }
             break;
           }
-          case 'weg':
-            if (x === TOR_X) this.kachel(laternenZeilen.has(y) ? 'road-straight-lightposts' : 'road-straight', x, y, 0, '#bdb6ad');
-            else this.kachel('pavement', x, y, 0, '#c8c0b4');
+          case 'strasse':
+          case 'uebergang':
+            this.strassenKachel(x, y, setze);
+            if (b === 'uebergang') {
+              setze(gleis(), x, y, 0.005).scale.set(1, 0.4, 1);
+              setze(andreaskreuz(), x + 0.42, y + 0.42);
+            }
+            break;
+          case 'pflaster':
+            setze(this.modelle!.stadt.pavement.clone(), x, y, 0).traverse((m) => this.toenen(m, r < 0.5 ? '#b3aca0' : '#a9a294'));
             break;
           case 'kies':
-          case 'haus':
-            this.kachel('pavement', x, y, 0, '#b7a991');
+            setze(this.modelle!.stadt.pavement.clone(), x, y, 0).traverse((m) => this.toenen(m, '#b7a991'));
             break;
-          case 'kern':
-            this.kachel('pavement', x, y, 0, '#d9c8b0');
+          case 'feld': {
+            setze(kiste(1, BODEN_Y * 0.8, 1, '#5a4430'), x, y, 0);
+            const reihe = this.teil('natur/crops_dirtDoubleRow');
+            setze(reihe, x, y, 0.02);
+            const pflanze: Teil = r < 0.5 ? 'natur/crops_wheatStageB' : 'natur/crops_cornStageD';
+            for (const dx of [-0.25, 0.25]) {
+              const p = this.teil(pflanze);
+              p.position.set(dx, 0, 0);
+              p.scale.setScalar(pflanze === 'natur/crops_cornStageD' ? 0.55 : 0.8);
+              setze(p, x, y);
+            }
             break;
-          case 'grenze':
-          case 'seitentor':
-          case 'kernmauer':
-          case 'aussenmauer':
-          case 'haupttor':
-            this.kachel('grass', x, y, 0, '#7d8a72');
+          }
+          case 'wasser':
+          case 'bruecke': {
+            // Bachbett etwas tiefer, Wasseroberfläche knapp unter dem Rasen
+            setze(kiste(1, 0.015, 1, '#3d4a30'), x, y, 0);
+            setze(kiste(1, 0.035, 1, this.wasserMat), x, y, 0);
+            // Uferkante zu Land hin
+            for (const [dx, dy] of [[0, -1], [0, 1]] as const) {
+              const n = boden(x + dx, y + dy);
+              if (n !== 'wasser' && n !== 'bruecke') setze(kiste(1, 0.07, 0.08, '#5b4a36', 0, 0, dy * 0.46), x, y, 0);
+            }
+            if (b === 'bruecke') {
+              const br = this.teil('natur/bridge_wood');
+              br.rotation.y = Math.PI / 2;
+              br.scale.set(1, 0.6, 1);
+              setze(br, x, y, 0.0);
+            }
             break;
+          }
+          case 'gleis':
+            setze(kiste(1, BODEN_Y, 1, '#4f6b3a'), x, y, 0);
+            setze(gleis(), x, y);
+            break;
+          case 'ruine':
+            setze(kiste(1, BODEN_Y, 1, '#8c857a'), x, y, 0);
+            setze(ruine(this.kasten, x * 31 + y), x, y);
+            break;
+          case 'kirche':
+            setze(kiste(1, BODEN_Y, 1, '#a9a294'), x, y, 0);
+            if (!kirchturm) {
+              kirchturm = true;
+              setze(turm(this.kasten, 'kirche'), x, y);
+            } else setze(kirchenschiff(this.kasten), x, y);
+            break;
+          case 'halle':
+            setze(kiste(1, BODEN_Y, 1, '#8f8a82'), x, y, 0);
+            setze(halle(this.kasten, boden(x, y - 1) === 'halle' || boden(x, y + 1) === 'halle'), x, y);
+            break;
+          case 'container':
+            setze(kiste(1, BODEN_Y, 1, '#8f8a82'), x, y, 0);
+            setze(container(x * 13 + y * 7), x, y);
+            break;
+          case 'scheune':
+            setze(kiste(1, BODEN_Y, 1, '#7d6a50'), x, y, 0);
+            setze(scheune(this.kasten), x, y);
+            break;
+          default:
+            setze(kiste(1, BODEN_Y, 1, '#4f6b3a'), x, y, 0);
         }
+      }
+    }
+    // Laternen an der Straße, mit Licht für die Nacht
+    const strassen: Array<[number, number]> = [];
+    for (let y = INNEN_OBEN; y <= INNEN_UNTEN; y++) for (let x = 1; x < BREITE - 1; x++) if (boden(x, y) === 'strasse') strassen.push([x, y]);
+    const ziele = [INNEN_OBEN + 3, Math.round((INNEN_OBEN + INNEN_UNTEN) / 2), INNEN_UNTEN - 2];
+    ziele.forEach((zy, n) => {
+      const kandidaten = strassen.filter(([, y]) => Math.abs(y - zy) <= 2);
+      const wahl = kandidaten[Math.floor(zufall(n, zy, k.seed % 31) * kandidaten.length)] ?? strassen[n];
+      if (!wahl) return;
+      const lampe = this.teil('friedhof/lightpost-single');
+      lampe.scale.setScalar(0.6);
+      setze(lampe, wahl[0] + 0.4, wahl[1] - 0.4);
+      const p = welt(wahl[0] + 0.4, wahl[1] - 0.4);
+      this.laternenLichter[n]?.position.set(p.x, 0.9, p.z);
+    });
+    this.verschmelzeStatisch(this.bezirkGruppe);
+  }
+
+  /** Straßenkachel passend zu den Nachbarn: gerade, Kurve, Einmündung, Kreuzung. */
+  private strassenKachel(x: number, y: number, setze: (o: THREE.Object3D, x: number, y: number, h?: number) => THREE.Object3D): void {
+    const dirs: Richtung[] = [];
+    if (this.istStrasse(x + 1, y)) dirs.push('O');
+    if (this.istStrasse(x, y - 1)) dirs.push('N');
+    if (this.istStrasse(x - 1, y)) dirs.push('W');
+    if (this.istStrasse(x, y + 1)) dirs.push('S');
+    let modell: StadtModell = 'road-straight';
+    let basis: Richtung[] = STRASSE_BASIS.gerade;
+    if (dirs.length === 4) {
+      modell = 'road-intersection';
+      basis = ['O', 'N', 'W', 'S'];
+    } else if (dirs.length === 3) {
+      modell = 'road-split';
+      basis = STRASSE_BASIS.einmuendung;
+    } else if (dirs.length === 2 && !(dirs.includes('O') && dirs.includes('W')) && !(dirs.includes('N') && dirs.includes('S'))) {
+      modell = 'road-corner';
+      basis = STRASSE_BASIS.kurve;
+    }
+    let ziel = dirs;
+    if (dirs.length <= 1) ziel = dirs.includes('O') || dirs.includes('W') ? ['O', 'W'] : ['N', 'S'];
+    const k = drehungFuer(basis, ziel) ?? 0;
+    const o = this.modelle!.stadt[modell].clone();
+    o.rotation.y = k * (Math.PI / 2);
+    o.traverse((m) => this.toenen(m, '#bdb6ad'));
+    setze(o, x, y, 0);
+  }
+
+  private toenen(o: THREE.Object3D, farbe: string): void {
+    const m = o as THREE.Mesh;
+    if (m.isMesh) m.material = this.getoent(m.material as THREE.MeshStandardMaterial, farbe);
+  }
+
+  /** Alles außerhalb des Bezirks: Landstraße, Friedhof, Wald, Mauern, Hauptstadt. Wird einmal gebaut. */
+  private baueUmgebung(): void {
+    for (let y = 0; y < HOEHE; y++) {
+      for (let x = 0; x < BREITE; x++) {
+        const innen = y >= INNEN_OBEN && y <= INNEN_UNTEN && x > 0 && x < BREITE - 1;
+        if (innen) continue;
         const p = welt(x, y);
+        if (y < ZEILE_AUSSENMAUER) this.kachel('road-straight', x, y, Math.PI / 2, '#8a8580');
+        else if (y > ZEILE_KERNMAUER && x > 0 && x < BREITE - 1) this.kachel('pavement', x, y, 0, '#d9c8b0');
+        else this.kachel('grass', x, y, 0, '#7d8a72');
         let deko: THREE.Object3D | null = null;
-        if (b === 'grenze') deko = grenze();
-        else if (b === 'seitentor') deko = seitentor();
-        else if (b === 'kernmauer') {
+        if (y > ZEILE_AUSSENMAUER && y < ZEILE_KERNMAUER) deko = y === ZEILE_SEITENTOR ? seitentor() : grenze();
+        else if (y >= ZEILE_KERNMAUER && (y === ZEILE_KERNMAUER || x === 0 || x === BREITE - 1) && x !== TOR_X) {
           const eckturm = x === 0 || x === BREITE - 1;
           deko = this.teil(eckturm ? 'burg/tower-square' : 'burg/wall', '#a39b90');
           deko.scale.set(1, eckturm ? 0.95 : 0.75, 1);
           if (!eckturm) deko.rotation.y = Math.PI / 2;
-          if (eckturm && y === ZEILE_AUSSENMAUER + 17) {
+          if (eckturm && y === ZEILE_KERNMAUER) {
             const fahne = this.teil('burg/flag');
             fahne.position.y = 1.25;
             deko.add(fahne);
@@ -597,30 +845,6 @@ export class Renderer3D {
         }
       }
     }
-    // Häuser: jeweils mitten auf ihre 2 x 2 Kacheln
-    const typen: Teil[] = ['vorstadt/building-type-a', 'vorstadt/building-type-h', 'vorstadt/building-type-c'];
-    HAEUSER.forEach((h, n) => {
-      const mitte = welt(h.x + (h.b - 1) / 2, h.y + (h.h - 1) / 2);
-      const haus = this.teil(typen[n % typen.length]);
-      haus.position.set(mitte.x, BODEN_Y, mitte.z);
-      haus.scale.setScalar(1.35);
-      this.statisch.add(haus);
-      // Jeder Garten etwas anders: Kübel, Bäumchen
-      const kuebel = this.teil('vorstadt/planter');
-      kuebel.position.set(mitte.x - 0.75, BODEN_Y, mitte.z + 0.75);
-      this.statisch.add(kuebel);
-      if (n !== 1) {
-        const baum = this.teil(n === 0 ? 'vorstadt/tree-large' : 'vorstadt/tree-small');
-        baum.position.set(mitte.x + 0.78, BODEN_Y, mitte.z - 0.72);
-        baum.scale.setScalar(1.4);
-        this.statisch.add(baum);
-      }
-      // Mülltonnen neben dem Haus
-      const p = welt(h.x + h.b, h.y + h.h - 1);
-      for (const dz of [-0.15, 0.12]) {
-        this.statisch.add(kiste(0.14, 0.2, 0.14, '#3c4a3a', p.x - 0.25, BODEN_Y, p.z + dz));
-      }
-    });
 
     // Hinter der Landstraße der Friedhof, an den Seiten dunkler Kiefernwald (ohne Schattenwurf, spart Leistung)
     this.friedhof();
@@ -873,7 +1097,7 @@ export class Renderer3D {
         continue;
       }
       if (alt) this.bauGruppe.remove(alt.obj);
-      const obj = this.bauModell(b.id, stufe / 4, mauer);
+      const obj = this.bauModell(b.id, stufe / 4, mauer, i);
       const p = welt(x, Math.floor(i / BREITE));
       obj.position.set(p.x, BODEN_Y, p.z);
       if (b.id === 'holzwand') obj.rotation.y = this.wandDrehung(i, a.bauten);
@@ -1035,9 +1259,9 @@ export class Renderer3D {
     (this.szene.background as THREE.Color).copy(himmel);
     (this.szene.fog as THREE.Fog).color.copy(himmel);
     (this.szene.fog as THREE.Fog).near = 30 - n * 10;
-    this.hemi.intensity = 1.1 - n * 0.6;
+    this.hemi.intensity = 1.1 - n * 0.45;
     this.hemi.color.set('#c3cbd8').lerp(new THREE.Color('#5a6fa8'), n);
-    this.sonne.intensity = 1.8 - n * 1.1;
+    this.sonne.intensity = 1.8 - n * 0.95;
     this.sonne.color.set('#ffd9b0').lerp(new THREE.Color('#8fa8ff'), n);
     const flackern = 1 + Math.sin(sekunden * 11) * 0.06 + Math.sin(sekunden * 23) * 0.04;
     for (const l of this.laternenLichter) l.intensity = (0.4 + n * 5) * flackern;
@@ -1062,6 +1286,7 @@ export class Renderer3D {
     for (const b of this.bauten.values()) {
       const teile = b.obj.userData.teile as TurmTeile | undefined;
       teile?.flammen?.forEach((m, k) => m.scale.set(0.07, 0.07 + (((f + k * 3) % 4) * 0.02), 0.07));
+      if (teile?.rad) teile.rad.rotation.z = sekunden * 0.8;
     }
   }
 

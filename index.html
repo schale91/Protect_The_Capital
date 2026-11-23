@@ -9,19 +9,23 @@
   <body>
     <div id="app">
       <header id="hud" class="holz">
-        <div class="plakette">
-          <img id="symbol-tag" class="symbol" alt="" />
-          <span id="hud-nacht">Tag 1</span>
+        <div class="hud-zeile">
+          <div class="plakette">
+            <img id="symbol-tag" class="symbol" alt="" />
+            <span id="hud-nacht">Tag 1</span>
+          </div>
+          <div class="kern">
+            <img id="symbol-kern" class="symbol" alt="" />
+            <div class="balken"><div id="hud-kern" class="balken-fuellung"></div></div>
+          </div>
+          <button id="menue-knopf" class="rund" aria-label="Menü"><span></span><span></span><span></span></button>
         </div>
-        <div class="plakette" title="Schrott">
-          <img id="symbol-schrott" class="symbol" alt="" />
-          <span id="hud-schrott">0</span>
+        <div class="hud-zeile lager">
+          <div class="plakette klein" title="Holz"><img id="symbol-holz" class="symbol" alt="" /><span id="hud-holz">0</span></div>
+          <div class="plakette klein" title="Schrott"><img id="symbol-schrott" class="symbol" alt="" /><span id="hud-schrott">0</span></div>
+          <div class="plakette klein" title="Nahrung"><img id="symbol-nahrung" class="symbol" alt="" /><span id="hud-nahrung">0</span></div>
+          <div class="plakette klein" title="Bewohner"><img id="symbol-bewohner" class="symbol" alt="" /><span id="hud-bewohner">0</span></div>
         </div>
-        <div class="kern">
-          <img id="symbol-kern" class="symbol" alt="" />
-          <div class="balken"><div id="hud-kern" class="balken-fuellung"></div></div>
-        </div>
-        <button id="menue-knopf" class="rund" aria-label="Menü"><span></span><span></span><span></span></button>
       </header>
 
       <main id="buehne">
@@ -36,6 +40,11 @@
 
       <footer id="leiste" class="holz">
         <div id="info" class="papier">Wähle unten ein Bauwerk und tippe auf ein Feld.</div>
+        <div id="reiter">
+          <button class="reiter aktiv" data-reiter="verteidigung">Verteidigung</button>
+          <button class="reiter" data-reiter="versorgung">Versorgung</button>
+          <button class="reiter" data-reiter="werkzeug">Werkzeuge</button>
+        </div>
         <div id="werkzeuge"></div>
         <div id="nacht-steuerung" hidden>
           <button id="tempo" class="knopf">Tempo 1×</button>
@@ -57,12 +66,14 @@
       <div class="banner"><span>Menü</span></div>
       <button id="menue-zu" class="schliessen" aria-label="Schließen"></button>
       <div class="papier inhalt">
+        <h3>Dein Bezirk</h3>
+        <p id="bezirk-info"></p>
         <h3>Einstellungen</h3>
         <label class="schalter"><input type="checkbox" id="ton-schalter" /> <span>Ton</span></label>
         <h3>Bestiarium</h3>
         <div id="bestiarium"></div>
         <h3>Über das Spiel</h3>
-        <p class="leise">Protect the Capital, Meilenstein 1. Ein Bezirk, ein Tor, viele Tote.</p>
+        <p class="leise">Protect the Capital, Meilenstein 1b. Vier Bezirkstypen, ein Tor, viele Tote.</p>
         <p class="leise">Grafik und Töne: Kenney (kenney.nl), CC0. Danke!</p>
       </div>
       <button id="neu-anfangen" class="knopf-grau">Spiel neu anfangen</button>

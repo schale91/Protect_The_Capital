@@ -6,13 +6,17 @@
  * Deshalb suchen sich die Toten immer den Weg des geringsten Widerstands.
  */
 import { BAUTEN } from './data';
-import { BREITE, HOEHE, type Boden, bodenBegehbar, idx, istKern } from './karte';
+import { BREITE, GELAENDE, HOEHE, type Boden, idx, istKern } from './karte';
 
 export interface BauwerkZustand {
   id: keyof typeof BAUTEN;
   hp: number;
   maxHp: number;
   abklingen: number;
+  /** Besetzt (genug Bewohner da). Unbesetzte Türme schießen nicht. */
+  aktiv: boolean;
+  /** Zusätzliche Reichweite, zum Beispiel durch den Glockenturm. */
+  reichweitePlus: number;
 }
 
 /** Wie viele Lebenspunkte eine Kachel "Umweg" wert sind. */
@@ -30,8 +34,9 @@ export const NACHBARN: ReadonlyArray<readonly [number, number]> = [
 export function betretKosten(boden: Boden, bau: BauwerkZustand | null): number {
   if (bau && BAUTEN[bau.id].blockiert) return 1 + bau.hp / HP_PRO_SCHRITT;
   // Zerstörte Mauer- und Torstücke sind Trümmer und damit begehbar.
-  if (bodenBegehbar(boden) || boden === 'aussenmauer' || boden === 'haupttor') return 1;
-  return Infinity;
+  if (boden === 'aussenmauer' || boden === 'haupttor') return 1;
+  // Straßen sind bequem, Rasen und Felder mühsam: Die Toten bleiben gern auf der Straße.
+  return GELAENDE[boden]?.kosten ?? Infinity;
 }
 
 export function berechneFeld(boden: readonly Boden[], bauten: readonly (BauwerkZustand | null)[]): Float64Array {

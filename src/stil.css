@@ -160,10 +160,38 @@ button {
 
 #hud {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  gap: 2px;
   padding: 0 2px;
   z-index: 2;
+}
+
+.hud-zeile {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hud-zeile.lager {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+
+.plakette.klein {
+  font-size: 15px;
+  min-height: 30px;
+  padding: 0 4px 0 2px;
+  justify-content: center;
+}
+
+.plakette.klein .symbol {
+  width: 26px;
+  height: 26px;
+}
+
+.plakette.mangel span {
+  color: #ffb3a8;
 }
 
 .kern {
@@ -314,10 +342,38 @@ button {
   color: #8a2d26;
 }
 
+#reiter {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  margin-bottom: -2px;
+}
+
+.reiter {
+  border-style: solid;
+  border-width: 6px;
+  border-image: url('./ui/button_grey.png') 18 fill / 6px / 0 stretch;
+  font-family: var(--titel);
+  font-size: 13px;
+  color: #3a4250;
+  padding: 0 2px 2px;
+}
+
+.reiter.aktiv {
+  border-image: url('./ui/button_brown.png') 18 fill / 6px / 0 stretch;
+  color: var(--tinte);
+}
+
 #werkzeuge {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 4px;
+}
+
+.kosten {
+  display: inline-flex;
+  align-items: center;
+  margin: 0 1px;
 }
 
 .werkzeug {
@@ -346,7 +402,9 @@ button {
 .werkzeug .preis {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0 2px;
   color: var(--holz-dunkel);
 }
 
